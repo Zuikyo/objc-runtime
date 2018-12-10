@@ -491,7 +491,7 @@ void _class_initialize(Class cls)
     // Make sure super is done initializing BEFORE beginning to initialize cls.
     // See note about deadlock above.
     supercls = cls->superclass;
-    if (supercls  &&  !supercls->isInitialized()) {
+    if (supercls  &&  !supercls->isInitialized()) { // note: 先 initialize 父类
         _class_initialize(supercls);
     }
     
@@ -508,7 +508,7 @@ void _class_initialize(Class cls)
         // We successfully set the CLS_INITIALIZING bit. Initialize the class.
         
         // Record that we're initializing this class so we can message it.
-        _setThisThreadIsInitializingClass(cls);
+        _setThisThreadIsInitializingClass(cls); // note: 保证 initialize 线程安全
 
         if (MultithreadedForkChild) {
             // LOL JK we don't really call +initialize methods after fork().
@@ -569,7 +569,7 @@ void _class_initialize(Class cls)
         if (_thisThreadIsInitializingClass(cls)) {
             return;
         } else if (!MultithreadedForkChild) {
-            waitForInitializeToComplete(cls);
+            waitForInitializeToComplete(cls);   // note: 等待其他线程的 initialize 结束
             return;
         } else {
             // We're on the child side of fork(), facing a class that

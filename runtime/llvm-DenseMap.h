@@ -128,7 +128,7 @@ public:
     BucketT *TheBucket;
     if (LookupBucketFor(Val, TheBucket))
       return iterator(TheBucket, getBucketsEnd(), true);
-    return end();
+    return end();  // note: 返回 end() 表示没找到
   }
   const_iterator find(const KeyT &Val) const {
     const BucketT *TheBucket;

@@ -123,13 +123,13 @@ void _objc_setBadAllocHandler(id(*newHandler)(Class))
 
 namespace {
 
-// The order of these bits is important.
-#define SIDE_TABLE_WEAKLY_REFERENCED (1UL<<0)
-#define SIDE_TABLE_DEALLOCATING      (1UL<<1)  // MSB-ward of weak bit
-#define SIDE_TABLE_RC_ONE            (1UL<<2)  // MSB-ward of deallocating bit
-#define SIDE_TABLE_RC_PINNED         (1UL<<(WORD_BITS-1))
+// The order of these bits is important.    // note: SideTable.refcnts 中的 value 的 mask
+#define SIDE_TABLE_WEAKLY_REFERENCED (1UL<<0)   // note: 是否有 weak 对象
+#define SIDE_TABLE_DEALLOCATING      (1UL<<1)  // MSB-ward of weak bit  // note: 是否正在析构
+#define SIDE_TABLE_RC_ONE            (1UL<<2)  // MSB-ward of deallocating bit  // note: 第 3 个 bit 开始才是存储引用计数的地方，用来增减引用计数
+#define SIDE_TABLE_RC_PINNED         (1UL<<(WORD_BITS-1))   // note: 引用计数值是否溢出
 
-#define SIDE_TABLE_RC_SHIFT 2
+#define SIDE_TABLE_RC_SHIFT 2   // note: 第 3 个 bit 开始才是存储引用计数的地方
 #define SIDE_TABLE_FLAG_MASK (SIDE_TABLE_RC_ONE-1)
 
 // RefcountMap disguises its pointers because we 
@@ -140,10 +140,11 @@ typedef objc::DenseMap<DisguisedPtr<objc_object>,size_t,true> RefcountMap;
 enum HaveOld { DontHaveOld = false, DoHaveOld = true };
 enum HaveNew { DontHaveNew = false, DoHaveNew = true };
 
+// note: 管理引用计数表和 weak 表
 struct SideTable {
-    spinlock_t slock;
-    RefcountMap refcnts;
-    weak_table_t weak_table;
+    spinlock_t slock;   // note: 保证原子操作的自旋锁
+    RefcountMap refcnts;    // note: 保存对象的引用计数的散列表
+    weak_table_t weak_table;    // note: 保存 weak 引用的全局散列表，保存所有的 weak 引用。将对象作为键，weak_entry_t 作为值。weak_entry_t 中保存了所有指向该对象的 weak 指针
 
     SideTable() {
         memset(&weak_table, 0, sizeof(weak_table));
@@ -214,10 +215,10 @@ void SideTable::unlockTwo<DontHaveOld, DoHaveNew>
 // pointer to this struct because of the extra indirection.
 // Do it the hard way.
 alignas(StripedMap<SideTable>) static uint8_t 
-    SideTableBuf[sizeof(StripedMap<SideTable>)];
+    SideTableBuf[sizeof(StripedMap<SideTable>)]; // note: 64 * 64 = 4096
 
 static void SideTableInit() {
-    new (SideTableBuf) StripedMap<SideTable>();
+    new (SideTableBuf) StripedMap<SideTable>(); // note: 初始化 SideTableBuf，创建一个 StripedMap<SideTable>
 }
 
 static StripedMap<SideTable>& SideTables() {
@@ -692,7 +693,7 @@ class AutoreleasePoolPage
     // never uses them.
 #   define EMPTY_POOL_PLACEHOLDER ((id*)1)
 
-#   define POOL_BOUNDARY nil
+#   define POOL_BOUNDARY nil    // note: aotorelease pool page 中的节点，每次 pop 会向 nil 之后加入的对象发送 release 消息
     static pthread_key_t const key = AUTORELEASE_POOL_KEY;
     static uint8_t const SCRIBBLE = 0xA3;  // 0xA3A3A3A3 after releasing
     static size_t const SIZE = 
@@ -941,7 +942,7 @@ class AutoreleasePoolPage
         tls_set_direct(key, (void *)EMPTY_POOL_PLACEHOLDER);
         return EMPTY_POOL_PLACEHOLDER;
     }
-
+    // note: 当前线程的正在使用的 autorelease pool page
     static inline AutoreleasePoolPage *hotPage() 
     {
         AutoreleasePoolPage *result = (AutoreleasePoolPage *)
@@ -1068,7 +1069,7 @@ public:
     }
 
 
-    static inline void *push() 
+    static inline void *push() // note: 返回 POOL_BOUNDARY 的地址，用于 pop
     {
         id *dest;
         if (DebugPoolAllocation) {
@@ -1400,7 +1401,7 @@ objc_object::sidetable_addExtraRC_nolock(size_t delta_rc)
     assert((oldRefcnt & SIDE_TABLE_WEAKLY_REFERENCED) == 0);
 
     if (oldRefcnt & SIDE_TABLE_RC_PINNED) return true;
-
+    // note: refcnt 的低2位用于存储 weak 和 deallocating，因此需要左移 SIDE_TABLE_RC_SHIFT 后再加，才是和真正的 retain count 相加
     uintptr_t carry;
     size_t newRefcnt = 
         addc(oldRefcnt, delta_rc << SIDE_TABLE_RC_SHIFT, 0, &carry);
@@ -1463,7 +1464,7 @@ objc_object::sidetable_retain()
 #if SUPPORT_NONPOINTER_ISA
     assert(!isa.nonpointer);
 #endif
-    SideTable& table = SideTables()[this];
+    SideTable& table = SideTables()[this];  // note: 取出一个 SideTable
     
     table.lock();
     size_t& refcntStorage = table.refcnts[this];
@@ -1581,7 +1582,7 @@ objc_object::sidetable_setWeaklyReferenced_nolock()
 // return uintptr_t instead of bool so that the various raw-isa 
 // -release paths all return zero in eax
 uintptr_t
-objc_object::sidetable_release(bool performDealloc)
+objc_object::sidetable_release(bool performDealloc) // note: SideTable 中的引用计数减 1，返回是否调用 dealloc 进行析构
 {
 #if SUPPORT_NONPOINTER_ISA
     assert(!isa.nonpointer);
@@ -1592,14 +1593,14 @@ objc_object::sidetable_release(bool performDealloc)
 
     table.lock();
     RefcountMap::iterator it = table.refcnts.find(this);
-    if (it == table.refcnts.end()) {
+    if (it == table.refcnts.end()) {        // note: 设置 SideTable 中的标志位，表示正在析构
         do_dealloc = true;
         table.refcnts[this] = SIDE_TABLE_DEALLOCATING;
-    } else if (it->second < SIDE_TABLE_DEALLOCATING) {
-        // SIDE_TABLE_WEAKLY_REFERENCED may be set. Don't change it.
+    } else if (it->second < SIDE_TABLE_DEALLOCATING) {      // note: 当前引用计数为 1，再减 1，则为 0，需要析构
+        // SIDE_TABLE_WEAKLY_REFERENCED may be set. Don't change it.    // note: 不改变 SIDE_TABLE_WEAKLY_REFERENCED 标志位
         do_dealloc = true;
         it->second |= SIDE_TABLE_DEALLOCATING;
-    } else if (! (it->second & SIDE_TABLE_RC_PINNED)) {
+    } else if (! (it->second & SIDE_TABLE_RC_PINNED)) { // note: 没有溢出，则引用计数减 1
         it->second -= SIDE_TABLE_RC_ONE;
     }
     table.unlock();

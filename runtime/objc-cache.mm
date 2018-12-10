@@ -535,7 +535,7 @@ static void cache_fill_nolock(Class cls, SEL sel, IMP imp, id receiver)
 {
     cacheUpdateLock.assertLocked();
 
-    // Never cache before +initialize is done
+    // Never cache before +initialize is done   // note: +initialize 之前不进行缓存
     if (!cls->isInitialized()) return;
 
     // Make sure the entry wasn't added to the cache by some other thread 
@@ -543,7 +543,7 @@ static void cache_fill_nolock(Class cls, SEL sel, IMP imp, id receiver)
     if (cache_getImp(cls, sel)) return;
 
     cache_t *cache = getCache(cls);
-    cache_key_t key = getKey(sel);
+    cache_key_t key = getKey(sel);  // note: SEL 的地址作为 hash key
 
     // Use the cache as-is if it is less than 3/4 full
     mask_t newOccupied = cache->occupied() + 1;
@@ -556,7 +556,7 @@ static void cache_fill_nolock(Class cls, SEL sel, IMP imp, id receiver)
         // Cache is less than 3/4 full. Use it as-is.
     }
     else {
-        // Cache is too full. Expand it.
+        // Cache is too full. Expand it.    // note: 缓存使用超过了 3/4，扩展容量
         cache->expand();
     }
 

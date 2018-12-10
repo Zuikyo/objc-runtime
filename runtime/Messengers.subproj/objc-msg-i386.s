@@ -600,11 +600,11 @@ LGetImpExit:
 	movl    selector(%esp), %ecx
 	movl	self(%esp), %eax
 
-// check whether receiver is nil 
+// check whether receiver is nil // note: 1. 检查 nil
 	testl	%eax, %eax
 	je	LMsgSendNilSelf
 
-// receiver (in %eax) is non-nil: search the cache
+// receiver (in %eax) is non-nil: search the cache  // note: 2. 从缓存中查找，见 CacheLookup
 LMsgSendReceiverOk:
 	movl	isa(%eax), %edx		// class = self->isa
 	CacheLookup WORD_RETURN, MSG_SEND, LMsgSendCacheMiss
@@ -612,7 +612,7 @@ LMsgSendReceiverOk:
 	MESSENGER_END_FAST
 	jmp	*%eax
 
-// cache miss: go search the method lists
+// cache miss: go search the method lists   // note: 3. 缓存未命中，从 method list 中查找，见 MethodTableLookup
 LMsgSendCacheMiss:
 	MethodTableLookup WORD_RETURN, MSG_SEND
 	xor	%edx, %edx		// set nonstret for msgForward_internal

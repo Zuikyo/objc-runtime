@@ -540,7 +540,7 @@ static bool isBundleClass(Class cls)
     return cls->data()->ro->flags & RO_FROM_BUNDLE;
 }
 
-
+// note: 缓存 selector，对 method list 的 selector 进行内存地址唯一化，按照 selector 的地址进行排序
 static void 
 fixupMethodList(method_list_t *mlist, bool bundleCopy, bool sort)
 {
@@ -713,7 +713,7 @@ static void methodizeClass(Class cls)
         rw->protocols.attachLists(&protolist, 1);
     }
 
-    // Root classes get bonus method implementations if they don't have 
+    // Root classes get bonus method implementations if they don't have
     // them already. These apply before category replacements.
     if (cls->isRootMetaclass()) {
         // root metaclass
@@ -1689,7 +1689,7 @@ static void reconcileInstanceVariables(Class cls, Class supercls, const class_ro
     // fixme can optimize for "class has no new ivars", etc
 
     if (ro->instanceStart < super_ro->instanceSize) {
-        // Superclass has changed size. This class's ivars must move.
+        // Superclass has changed size. This class's ivars must move.   // note: superclass 的实例变量有修改，当前 class 需要调整
         // Also slide layout bits in parallel.
         // This code is incapable of compacting the subclass to 
         //   compensate for a superclass that shrunk, so don't do that.
@@ -1737,7 +1737,7 @@ static Class realizeClass(Class cls)
         ro = cls->data()->ro;
         cls->changeInfo(RW_REALIZED|RW_REALIZING, RW_FUTURE);
     } else {
-        // Normal class. Allocate writeable class data.
+        // Normal class. Allocate writeable class data. // note: 为 rw 创建内存
         rw = (class_rw_t *)calloc(sizeof(class_rw_t), 1);
         rw->ro = ro;
         rw->flags = RW_REALIZED|RW_REALIZING;
@@ -1762,7 +1762,7 @@ static Class realizeClass(Class cls)
     // Realize superclass and metaclass, if they aren't already.
     // This needs to be done after RW_REALIZED is set above, for root classes.
     // This needs to be done after class index is chosen, for root metaclasses.
-    supercls = realizeClass(remapClass(cls->superclass));
+    supercls = realizeClass(remapClass(cls->superclass));   // note: 首先初始化父类和元类
     metacls = realizeClass(remapClass(cls->ISA()));
 
 #if SUPPORT_NONPOINTER_ISA
@@ -1806,7 +1806,7 @@ static Class realizeClass(Class cls)
 
     // Reconcile instance variable offsets / layout.
     // This may reallocate class_ro_t, updating our ro variable.
-    if (supercls  &&  !isMeta) reconcileInstanceVariables(cls, supercls, ro);
+    if (supercls  &&  !isMeta) reconcileInstanceVariables(cls, supercls, ro);   // note: 重对齐实例变量偏移地址
 
     // Set fastInstanceSize if it wasn't set already.
     cls->setInstanceSize(ro->instanceSize);
@@ -2887,7 +2887,7 @@ _method_setImplementation(Class cls, method_t *m, IMP imp)
     // RR/AWZ updates are slow if cls is nil (i.e. unknown)
     // fixme build list of classes whose Methods are known externally?
 
-    flushCaches(cls);
+    flushCaches(cls);   // note: 更新缓存
 
     updateCustomRR_AWZ(cls, m);
 
@@ -4434,9 +4434,9 @@ static method_t *search_method_list(const method_list_t *mlist, SEL sel)
     int methodListHasExpectedSize = mlist->entsize() == sizeof(method_t);
     
     if (__builtin_expect(methodListIsFixedUp && methodListHasExpectedSize, 1)) {
-        return findMethodInSortedMethodList(sel, mlist);
+        return findMethodInSortedMethodList(sel, mlist);    // note: 在排序后的 method list 中进行二分查找
     } else {
-        // Linear search of unsorted method list
+        // Linear search of unsorted method list    // note: 在未排序的 method list 中线性查找
         for (auto& meth : *mlist) {
             if (meth.name == sel) return &meth;
         }
@@ -4595,7 +4595,7 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
 
     runtimeLock.assertUnlocked();
 
-    // Optimistic cache lookup
+    // Optimistic cache lookup  // note: 乐观缓存查找
     if (cache) {
         imp = cache_getImp(cls, sel);
         if (imp) return imp;
@@ -4619,7 +4619,7 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
         runtimeLock.unlockRead();
         runtimeLock.write();
 
-        realizeClass(cls);
+        realizeClass(cls);  // note: 如果 class 尚未初始化，则执行初始化
 
         runtimeLock.unlockWrite();
         runtimeLock.read();
@@ -4627,7 +4627,7 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
 
     if (initialize  &&  !cls->isInitialized()) {
         runtimeLock.unlockRead();
-        _class_initialize (_class_getNonMetaClass(cls, inst));
+        _class_initialize (_class_getNonMetaClass(cls, inst));  // note: 首次调用方法，执行 +initialize
         runtimeLock.read();
         // If sel == initialize, _class_initialize will send +initialize and 
         // then the messenger will send +initialize again after this 
@@ -4641,20 +4641,20 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
 
     // Try this class's cache.
 
-    imp = cache_getImp(cls, sel);
+    imp = cache_getImp(cls, sel);   // note: 从缓存中查找
     if (imp) goto done;
 
-    // Try this class's method lists.
+    // Try this class's method lists.   // note: 在当前类的 method list 中查找
     {
         Method meth = getMethodNoSuper_nolock(cls, sel);
         if (meth) {
-            log_and_fill_cache(cls, meth->imp, sel, inst, cls);
+            log_and_fill_cache(cls, meth->imp, sel, inst, cls); // note: 找到后进行缓存
             imp = meth->imp;
             goto done;
         }
     }
 
-    // Try superclass caches and method lists.
+    // Try superclass caches and method lists.  // note: 在父类的缓存和 method list 中查找
     {
         unsigned attempts = unreasonableClassCount();
         for (Class curClass = cls->superclass;
@@ -4692,7 +4692,7 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
         }
     }
 
-    // No implementation found. Try method resolver once.
+    // No implementation found. Try method resolver once.   // note: 未找到方法，调用 resolveMethod 允许动态添加方法
 
     if (resolver  &&  !triedResolver) {
         runtimeLock.unlockRead();
@@ -4701,7 +4701,7 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
         // Don't cache the result; we don't hold the lock so it may have 
         // changed already. Re-do the search from scratch instead.
         triedResolver = YES;
-        goto retry;
+        goto retry; // note: 重试一次查找
     }
 
     // No implementation found, and method resolver didn't help. 
@@ -6295,8 +6295,8 @@ void *objc_destructInstance(id obj)
         bool assoc = obj->hasAssociatedObjects();
 
         // This order is important.
-        if (cxx) object_cxxDestruct(obj);
-        if (assoc) _object_remove_assocations(obj);
+        if (cxx) object_cxxDestruct(obj);   // note: 调用 .cxx_destruct，释放 ivar
+        if (assoc) _object_remove_assocations(obj);     // note: 移除 associate object
         obj->clearDeallocating();
     }
 

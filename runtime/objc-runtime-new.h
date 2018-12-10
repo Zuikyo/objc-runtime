@@ -50,9 +50,9 @@ public:
 
 
 struct cache_t {
-    struct bucket_t *_buckets;
-    mask_t _mask;
-    mask_t _occupied;
+    struct bucket_t *_buckets;  // note: 缓存列表
+    mask_t _mask;   // note: hash key 的 mask
+    mask_t _occupied;   // note: 已缓存的数量
 
 public:
     struct bucket_t *buckets();
@@ -524,7 +524,7 @@ struct locstamped_category_list_t {
 
 #endif
 
-
+// note: 编译时确定的 read-only 数据，保存在 Mach-O 文件的 __objc_const 节中；realizeClass 之前，保存在 objc_class->data() 中，在 realizeClass 中被保存到 class_rw_t->ro 上
 struct class_ro_t {
     uint32_t flags;
     uint32_t instanceStart;
@@ -1334,7 +1334,7 @@ struct category_t {
     struct property_list_t *_classProperties;
 
     method_list_t *methodsForMeta(bool isMeta) {
-        if (isMeta) return classMethods;
+        if (isMeta) return classMethods; // note: 元类中保存类方法
         else return instanceMethods;
     }
 

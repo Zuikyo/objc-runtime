@@ -127,7 +127,7 @@ BOOL sel_isMapped(SEL sel)
 }
 
 
-static SEL search_builtins(const char *name) 
+static SEL search_builtins(const char *name) // note: 在内置 selector hash 表中查找
 {
 #if SUPPORT_PREOPT
     if (builtins) return (SEL)builtins->get(name);
@@ -136,7 +136,7 @@ static SEL search_builtins(const char *name)
 }
 
 
-static SEL __sel_registerName(const char *name, int lock, int copy) 
+static SEL __sel_registerName(const char *name, int lock, int copy) // note: 通过字符串获取 selector，进行 SEL 的内存地址唯一化，不同 name 的 SEL 内存地址都不同
 {
     SEL result = 0;
 
@@ -150,7 +150,7 @@ static SEL __sel_registerName(const char *name, int lock, int copy)
     
     if (lock) selLock.read();
     if (namedSelectors) {
-        result = (SEL)NXMapGet(namedSelectors, name);
+        result = (SEL)NXMapGet(namedSelectors, name); // note: 在缓存中查找
     }
     if (lock) selLock.unlockRead();
     if (result) return result;
@@ -168,7 +168,7 @@ static SEL __sel_registerName(const char *name, int lock, int copy)
         result = (SEL)NXMapGet(namedSelectors, name);
     }
     if (!result) {
-        result = sel_alloc(name, copy);
+        result = sel_alloc(name, copy); // note: 如果需要 copy 且 string 的内存是可变的，则创建新 string，保证不同的 SEL 内存地址都不同
         // fixme choose a better container (hash not map for starters)
         NXMapInsert(namedSelectors, sel_getName(result), result);
     }

@@ -48,7 +48,7 @@ Source is http://burtleburtle.net/bob/c/perfect.c
  * When building the shared cache, dyld locates all selectors and selector 
  * references in the cached images. It builds a perfect hash table out of 
  * them and writes the table into the shared cache copy of libobjc.
- * libobjc then uses that table as the builtin selector list.
+ * libobjc then uses that table as the builtin selector list. // note: dyld_shared_cache 中的 libobjc 存有一张包含了整个 dyld_shared_cache 中用到的 selector 的 hash 表
  *
  * Versioning
  * The table has a version number. dyld and objc can both ignore the table 

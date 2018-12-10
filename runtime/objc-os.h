@@ -117,8 +117,8 @@ void vsyslog(int, const char *, va_list) UNAVAILABLE_ATTRIBUTE;
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 #define NEVER_INLINE inline __attribute__((noinline))
 
-#define fastpath(x) (__builtin_expect(bool(x), 1))
-#define slowpath(x) (__builtin_expect(bool(x), 0))
+#define fastpath(x) (__builtin_expect(bool(x), 1))  // note: 指令优化，x 很可能为真
+#define slowpath(x) (__builtin_expect(bool(x), 0))  // note: 指令优化，x 很可能为假
 
 typedef OSSpinLock os_lock_handoff_s;
 #define OS_LOCK_HANDOFF_INIT OS_SPINLOCK_INIT
@@ -238,7 +238,7 @@ static ALWAYS_INLINE
 bool 
 StoreExclusive(uintptr_t *dst, uintptr_t oldvalue, uintptr_t value)
 {
-    
+    // note: 如果 *dst 和 oldvalue 相等，那么就把 value 的值赋给 *dst，并且返回 true
     return __sync_bool_compare_and_swap((void **)dst, (void *)oldvalue, (void *)value);
 }
 
