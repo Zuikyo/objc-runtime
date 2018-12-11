@@ -64,7 +64,7 @@ namespace {
 #   error bad config
 #endif
 
-// note: 兼容 tagged pointer, see isTaggedPointer
+// note: 保存了 class，在 64 位上还利用多余的位数保存额外的信息
 union isa_t 
 {
     isa_t() { }
@@ -865,7 +865,7 @@ class StripedMap {
         T value alignas(CacheLineSize);
     };
 
-    PaddedT array[StripeCount]; // note: 创建 64 个 SideTable
+    PaddedT array[StripeCount]; // note: 创建 64 个 T 类型，例如 SideTable
 
     static unsigned int indexForPointer(const void *p) {
         uintptr_t addr = reinterpret_cast<uintptr_t>(p);

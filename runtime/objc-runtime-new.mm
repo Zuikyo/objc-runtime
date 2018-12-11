@@ -614,7 +614,7 @@ prepareMethodLists(Class cls, method_list_t **addedLists, int addedCount,
     }
 }
 
-
+// note: 把 category 信息添加到类的 class_rw_t 上
 // Attach method lists and properties and protocols from categories to a class.
 // Assumes the categories in cats are all loaded and sorted by load order, 
 // oldest categories first.
@@ -720,7 +720,7 @@ static void methodizeClass(Class cls)
         addMethod(cls, SEL_initialize, (IMP)&objc_noop_imp, "", NO);
     }
 
-    // Attach categories.
+    // Attach categories.   // note: 添加 category 到类上
     category_list *cats = unattachedCategoriesForClass(cls, true /*realizing*/);
     attachCategories(cls, cats, false /*don't flush caches*/);
 
@@ -1212,7 +1212,7 @@ static Class remapClass(Class cls)
     Class c2;
 
     if (!cls) return nil;
-
+    // note: 用于处理 CoreFoundation toll-bridging 的类，在标为 future class 后会 realloc，因此需要指向最新的内存
     NXMapTable *map = remappedClasses(NO);
     if (!map  ||  NXMapMember(map, cls, (void**)&c2) == NX_MAPNOTAKEY) {
         return cls;
@@ -2024,7 +2024,7 @@ map_images(unsigned count, const char * const paths[],
 
 /***********************************************************************
 * load_images
-* Process +load in the given images which are being mapped in by dyld.
+* Process +load in the given images which are being mapped in by dyld. // note: 处理 +load 方法
 *
 * Locking: write-locks runtimeLock and loadMethodLock
 **********************************************************************/
@@ -2191,7 +2191,7 @@ Class readClass(Class cls, bool headerIsBundle, bool headerIsPreoptimized)
         // assert(cls == getClass(name));
         assert(getClass(mangledName));
     } else {
-        addNamedClass(cls, mangledName, replacing);
+        addNamedClass(cls, mangledName, replacing); // note: 添加到字典中，之后就可以用 class name 获取 此 class
     }
     
     // for future reference: shared cache never contains MH_BUNDLEs
@@ -2265,7 +2265,7 @@ readProtocol(protocol_t *newproto, Class protocol_class,
         // New protocol from an un-preoptimized image
         // with sufficient storage. Fix it up in place.
         // fixme duplicate protocols from unloadable bundle
-        newproto->initIsa(protocol_class);  // fixme pinned
+        newproto->initIsa(protocol_class);  // fixme pinned // note: 设置 protocol 的父类
         insertFn(protocol_map, newproto->mangledName, newproto);
         if (PrintProtocols) {
             _objc_inform("PROTOCOLS: protocol at %p is %s",
@@ -2444,7 +2444,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 
     ts.log("IMAGE TIMES: remap classes");
 
-    // Fix up @selector references
+    // Fix up @selector references  // note: 注册所有 selector，内存唯一化
     static size_t UnfixedSelectors;
     sel_lock();
     for (EACH_HEADER) {
@@ -2480,7 +2480,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
     ts.log("IMAGE TIMES: fix up objc_msgSend_fixup");
 #endif
 
-    // Discover protocols. Fix up protocol refs.
+    // Discover protocols. Fix up protocol refs.    // note: 初始化所有 protocol_t
     for (EACH_HEADER) {
         extern objc_class OBJC_CLASS_$_Protocol;
         Class cls = (Class)&OBJC_CLASS_$_Protocol;
@@ -2498,7 +2498,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 
     ts.log("IMAGE TIMES: discover protocols");
 
-    // Fix up @protocol references
+    // Fix up @protocol references      // note: 处理所有 protocol_t *，处理 protocol_t 内存被重新创建的情况，让指针指向最新的内存
     // Preoptimized images may have the right 
     // answer already but we don't know for sure.
     for (EACH_HEADER) {
@@ -2510,7 +2510,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 
     ts.log("IMAGE TIMES: fix up @protocol references");
 
-    // Realize non-lazy classes (for +load methods and static instances)
+    // Realize non-lazy classes (for +load methods and static instances)    // note: +load 之前 realize
     for (EACH_HEADER) {
         classref_t *classlist = 
             _getObjc2NonlazyClassList(hi, &count);
@@ -2581,7 +2581,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
             if (cat->instanceMethods ||  cat->protocols  
                 ||  cat->instanceProperties) 
             {
-                addUnattachedCategoryForClass(cat, cls, hi);
+                addUnattachedCategoryForClass(cat, cls, hi);    // note: 记录待处理的 category，在 realizeClass 的时候处理
                 if (cls->isRealized()) {
                     remethodizeClass(cls);
                     classExists = YES;
@@ -2698,7 +2698,7 @@ static void schedule_class_load(Class cls)
 
     if (cls->data()->flags & RW_LOADED) return;
 
-    // Ensure superclass-first ordering
+    // Ensure superclass-first ordering // note: 先调用父类的 +load
     schedule_class_load(cls->superclass);
 
     add_class_to_loadable_list(cls);
@@ -2731,7 +2731,7 @@ void prepare_load_methods(const headerType *mhdr)
         category_t *cat = categorylist[i];
         Class cls = remapClass(cat->cls);
         if (!cls) continue;  // category for ignored weak-linked class
-        realizeClass(cls);
+        realizeClass(cls);  // note: +load 之前 realize
         assert(cls->ISA()->isRealized());
         add_category_to_loadable_list(cat);
     }

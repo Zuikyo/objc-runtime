@@ -350,11 +350,11 @@ void call_load_methods(void)
     do {
         // 1. Repeatedly call class +loads until there aren't any more
         while (loadable_classes_used > 0) {
-            call_class_loads();
+            call_class_loads(); // note: 先调用类定义中的 +load
         }
 
         // 2. Call category +loads ONCE
-        more_categories = call_category_loads();
+        more_categories = call_category_loads();    // note: 再调用 category 中的 +load
 
         // 3. Run more +loads if there are classes OR more untried categories
     } while (loadable_classes_used > 0  ||  more_categories);

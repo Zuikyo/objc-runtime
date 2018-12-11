@@ -273,7 +273,7 @@ void _object_set_associative_reference(id object, void *key, id value, uintptr_t
     ObjcAssociation old_association(0, nil);
     id new_value = value ? acquireValue(value, policy) : nil;
     {
-        AssociationsManager manager;
+        AssociationsManager manager; // note: 在 manager 的创建和释放时加锁
         AssociationsHashMap &associations(manager.associations());
         disguised_ptr_t disguised_object = DISGUISE(object);
         if (new_value) {

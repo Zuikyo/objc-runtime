@@ -55,17 +55,17 @@ T* getDataSection(const headerType *mhdr, const char *sectname,
     }
 
 //      function name                 content type     section name
-GETSECT(_getObjc2SelectorRefs,        SEL,             "__objc_selrefs"); 
-GETSECT(_getObjc2MessageRefs,         message_ref_t,   "__objc_msgrefs"); 
-GETSECT(_getObjc2ClassRefs,           Class,           "__objc_classrefs");
-GETSECT(_getObjc2SuperRefs,           Class,           "__objc_superrefs");
-GETSECT(_getObjc2ClassList,           classref_t,      "__objc_classlist");
-GETSECT(_getObjc2NonlazyClassList,    classref_t,      "__objc_nlclslist"); // note: 保存有 +load 方法的类
-GETSECT(_getObjc2CategoryList,        category_t *,    "__objc_catlist");
-GETSECT(_getObjc2NonlazyCategoryList, category_t *,    "__objc_nlcatlist");
-GETSECT(_getObjc2ProtocolList,        protocol_t *,    "__objc_protolist");
-GETSECT(_getObjc2ProtocolRefs,        protocol_t *,    "__objc_protorefs");
-GETSECT(getLibobjcInitializers,       Initializer,     "__objc_init_func");
+GETSECT(_getObjc2SelectorRefs,        SEL,             "__objc_selrefs"); // note: 代码中用到的 selector 引用
+GETSECT(_getObjc2MessageRefs,         message_ref_t,   "__objc_msgrefs");   // note: 旧版 objc 用到的数据
+GETSECT(_getObjc2ClassRefs,           Class,           "__objc_classrefs"); // note: 代码中用到的类引用
+GETSECT(_getObjc2SuperRefs,           Class,           "__objc_superrefs"); // note: 代码中用到的 superclass 引用
+GETSECT(_getObjc2ClassList,           classref_t,      "__objc_classlist"); // note: 当前 mach-o 中定义的所有类列表
+GETSECT(_getObjc2NonlazyClassList,    classref_t,      "__objc_nlclslist"); // note: 包含 +load 方法的类
+GETSECT(_getObjc2CategoryList,        category_t *,    "__objc_catlist");   // note: category 定义信息
+GETSECT(_getObjc2NonlazyCategoryList, category_t *,    "__objc_nlcatlist"); // note: 包含 +load 方法的 category
+GETSECT(_getObjc2ProtocolList,        protocol_t *,    "__objc_protolist"); // note: protocol 定义信息
+GETSECT(_getObjc2ProtocolRefs,        protocol_t *,    "__objc_protorefs"); // note: 代码中用到的 protocol 引用
+GETSECT(getLibobjcInitializers,       Initializer,     "__objc_init_func"); // note: constructor 属性的函数
 
 
 objc_image_info *

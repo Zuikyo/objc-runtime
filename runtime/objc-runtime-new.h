@@ -524,7 +524,7 @@ struct locstamped_category_list_t {
 
 #endif
 
-// note: 编译时确定的 read-only 数据，保存在 Mach-O 文件的 __objc_const 节中；realizeClass 之前，保存在 objc_class->data() 中，在 realizeClass 中被保存到 class_rw_t->ro 上
+// note: 类定义时的 method、protocol、ivar、property 信息。编译时确定的 read-only 数据，保存在 Mach-O 文件的 __objc_const 节中；realizeClass 之前，objc_class->data() 返回的是 class_ro_t，在 realizeClass 中被保存到 class_rw_t->ro 上
 struct class_ro_t {
     uint32_t flags;
     uint32_t instanceStart;
@@ -797,7 +797,7 @@ class protocol_array_t :
     }
 };
 
-
+// note: 保存类的 method、property、protocol、category 数组。用 runtime 修改类信息时作用在 class_rw_t 上
 struct class_rw_t {
     // Be warned that Symbolication knows the layout of this structure.
     uint32_t flags;
@@ -809,8 +809,8 @@ struct class_rw_t {
     property_array_t properties;
     protocol_array_t protocols;
 
-    Class firstSubclass;
-    Class nextSiblingClass;
+    Class firstSubclass;    // note: 第一个子类，在 realizeClass 时设置，哪个子类先使用就设为哪个
+    Class nextSiblingClass; // note: 下一个兄弟类，在 realizeClass 时设置，哪个兄弟类先使用就设为哪个
 
     char *demangledName;
 
@@ -1068,7 +1068,7 @@ struct objc_class : objc_object {
     class_data_bits_t bits;    // class_rw_t * plus custom rr/alloc flags
 
     class_rw_t *data() { 
-        return bits.data();
+        return bits.data(); // note: realizeClass 之前返回的是 class_ro_t *，realizeClass 之后返回 class_rw_t *
     }
     void setData(class_rw_t *newData) {
         bits.setData(newData);

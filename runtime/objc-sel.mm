@@ -107,7 +107,7 @@ static SEL sel_alloc(const char *name, bool copy)
 const char *sel_getName(SEL sel) 
 {
     if (!sel) return "<null selector>";
-    return (const char *)(const void*)sel;
+    return (const char *)(const void*)sel;  // note: selector 就是一个字符串
 }
 
 
