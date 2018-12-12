@@ -72,21 +72,21 @@
 #   define RC_HALF  (1ULL<<18)
 
 # elif __x86_64__
-#   define ISA_MASK        0x00007ffffffffff8ULL                                    // note: 从 isa 中获取 Class 指针的 mask
-#   define ISA_MAGIC_MASK  0x001f800000000001ULL                                    // note: (isa & magic_mask) == magic_value
-#   define ISA_MAGIC_VALUE 0x001d800000000001ULL                                    // note: 初始化 isa bits 的默认值
+#   define ISA_MASK        0x00007ffffffffff8ULL    // note: 从 isa 中获取 Class 指针的 mask
+#   define ISA_MAGIC_MASK  0x001f800000000001ULL    // note: (isa & magic_mask) == magic_value
+#   define ISA_MAGIC_VALUE 0x001d800000000001ULL    // note: 初始化 isa bits 的默认值
 #   define ISA_BITFIELD                                                        \
-      uintptr_t nonpointer        : 1;                                         \    // note: 0 表示普通的 isa 指针，1 表示使用优化，存储引用计数
-      uintptr_t has_assoc         : 1;                                         \    // note: 表示该对象是否包含 associated object，如果没有，则析构时会更快
-      uintptr_t has_cxx_dtor      : 1;                                         \    // note: 表示该对象是否有 C++ 或 ARC 的析构函数，如果没有，则析构时更快
-      uintptr_t shiftcls          : 44; /*MACH_VM_MAX_ADDRESS 0x7fffffe00000*/ \    // note: 类的指针
-      uintptr_t magic             : 6;                                         \    // note: 固定值为 0xd2，用于在调试时分辨对象是否未完成初始化
-      uintptr_t weakly_referenced : 1;                                         \    // note: 表示该对象是否有过 weak 对象，如果没有，则析构时更快
-      uintptr_t deallocating      : 1;                                         \    // note: 表示该对象是否正在析构
-      uintptr_t has_sidetable_rc  : 1;                                         \    // note: 表示该对象的引用计数值是否过大无法存储在 isa 指针，如果为 1，引用计数会存储在 SideTable 中
-      uintptr_t extra_rc          : 8                                               // note: 存储引用计数值减一后的结果
+      uintptr_t nonpointer        : 1;  /* note: 0 表示普通的 isa 指针，1 表示使用优化，存储引用计数 */             \
+      uintptr_t has_assoc         : 1;  /* note: 表示该对象是否包含 associated object，如果没有，则析构时会更快 */   \
+      uintptr_t has_cxx_dtor      : 1;  /* note: 表示该对象是否有 C++ 或 ARC 的析构函数，如果没有，则析构时更快 */     \
+      uintptr_t shiftcls          : 44; /*MACH_VM_MAX_ADDRESS 0x7fffffe00000*/  /* note: 类的指针 */           \
+      uintptr_t magic             : 6;  /* note: 固定值为 0xd2，用于在调试时分辨对象是否未完成初始化 */                \
+      uintptr_t weakly_referenced : 1;  /* note: 表示该对象是否有过 weak 对象，如果没有，则析构时更快 */                \
+      uintptr_t deallocating      : 1;  /* note: 表示该对象是否正在析构 */                                          \
+      uintptr_t has_sidetable_rc  : 1;  /* note: 表示该对象的引用计数值是否过大无法存储在 isa 指针，如果为 1，引用计数会存储在 SideTable 中 */ \
+      uintptr_t extra_rc          : 8   /* note: 存储引用计数值减一后的结果 */
 #   define RC_ONE   (1ULL<<56)
-#   define RC_HALF  (1ULL<<7)                                                       // note: isa 中的引用计数值溢出后，extra_rc 设为 RC_HALF，另一半值存在 SideTable 中
+#   define RC_HALF  (1ULL<<7)           /* note: isa 中的引用计数值溢出后，extra_rc 设为 RC_HALF，另一半值存在 SideTable 中 */
 
 # else
 #   error unknown architecture for packed isa
