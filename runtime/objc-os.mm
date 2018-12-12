@@ -631,7 +631,7 @@ unmap_image_nolock(const struct mach_header *mh)
 static void static_init()
 {
     size_t count;
-    auto inits = getLibobjcInitializers(&_mh_dylib_header, &count);
+    Initializer *inits = getLibobjcInitializers(&_mh_dylib_header, &count);
     for (size_t i = 0; i < count; i++) {
         inits[i]();
     }
@@ -783,7 +783,7 @@ void _objc_atfork_prepare()
     SideTableLockAll();
     classInitLock.enter();
 #if __OBJC2__
-    runtimeLock.lock();
+    runtimeLock.write();
     DemangleCacheLock.lock();
 #else
     methodListLock.lock();
@@ -791,7 +791,7 @@ void _objc_atfork_prepare()
     NXUniqueStringLock.lock();
     impLock.lock();
 #endif
-    selLock.lock();
+    selLock.write();
     cacheUpdateLock.lock();
     objcMsgLogLock.lock();
     AltHandlerDebugLock.lock();
@@ -815,11 +815,11 @@ void _objc_atfork_parent()
     crashlog_lock.unlock();
     loadMethodLock.unlock();
     cacheUpdateLock.unlock();
-    selLock.unlock();
+    selLock.unlockWrite();
     SideTableUnlockAll();
 #if __OBJC2__
     DemangleCacheLock.unlock();
-    runtimeLock.unlock();
+    runtimeLock.unlockWrite();
 #else
     impLock.unlock();
     NXUniqueStringLock.unlock();

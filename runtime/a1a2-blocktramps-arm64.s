@@ -1,44 +1,35 @@
 #if __arm64__
 
 #include <mach/vm_param.h>
-#include "arm64-asm.h"
-
-// Offset of block->invoke field.
-#if __LP64__
-    // true arm64
-#   define BLOCK_INVOKE 16
-#else
-    // arm64_32
-#   define BLOCK_INVOKE 12
-#endif
 
 .text
-.globl __objc_blockTrampolineImpl
-.globl __objc_blockTrampolineStart
-.globl __objc_blockTrampolineLast
+
+	.private_extern __a1a2_tramphead
+	.private_extern __a1a2_firsttramp
+	.private_extern __a1a2_trampend
 	
 .align PAGE_MAX_SHIFT
-__objc_blockTrampolineImpl:
-L_objc_blockTrampolineImpl:
+__a1a2_tramphead:
+L_a1a2_tramphead:
 	/*
 	 x0  == self
-	 x17 == address of called trampoline's data (2 pages before its code)
+	 x17 == address of called trampoline's data (1 page before its code)
 	 lr  == original return address
 	 */
 
 	mov  x1, x0                  // _cmd = self
-	ldr  p0, [x17]               // self = block object
-	add  p15, p0, #BLOCK_INVOKE  // x15 = &block->invoke
-	ldr  p16, [x15]              // x16 = block->invoke
-	TailCallBlockInvoke x16, x15
+	ldr  x0, [x17]               // self = block object
+	ldr  x16, [x0, #16]          // tail call block->invoke
+	br   x16
 
 	// pad up to TrampolineBlockPagePair header size
 	nop
+	nop
 	
 .macro TrampolineEntry
-	// load address of trampoline data (two pages before this instruction)
-	adr  x17, -2*PAGE_MAX_SIZE
-	b    L_objc_blockTrampolineImpl
+	// load address of trampoline data (one page before this instruction)
+	adr  x17, -PAGE_MAX_SIZE
+	b    L_a1a2_tramphead
 .endmacro
 
 .macro TrampolineEntryX16
@@ -86,7 +77,8 @@ L_objc_blockTrampolineImpl:
 .endmacro
 	
 .align 3
-__objc_blockTrampolineStart:
+.private_extern __a1a2_firsttramp
+__a1a2_firsttramp:	
 	// 2048-3 trampolines to fill 16K page
 	TrampolineEntryX256
 	TrampolineEntryX256
@@ -131,10 +123,12 @@ __objc_blockTrampolineStart:
 	TrampolineEntry
 	TrampolineEntry
 
-__objc_blockTrampolineLast:
 	TrampolineEntry
 	// TrampolineEntry
 	// TrampolineEntry
 	// TrampolineEntry
+	
+.private_extern __a1a2_trampend
+__a1a2_trampend:
 
 #endif

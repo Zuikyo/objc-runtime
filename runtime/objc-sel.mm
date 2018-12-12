@@ -67,7 +67,7 @@ void sel_init(size_t selrefCount)
 #define s(x) SEL_##x = sel_registerNameNoLock(#x, NO)
 #define t(x,y) SEL_##y = sel_registerNameNoLock(#x, NO)
 
-    mutex_locker_t lock(selLock);
+    sel_lock();
 
     s(load);
     s(initialize);
@@ -90,6 +90,8 @@ void sel_init(size_t selrefCount)
     s(retainWeakReference);
     s(allowsWeakReference);
 
+    sel_unlock();
+
 #undef s
 #undef t
 }
@@ -97,7 +99,7 @@ void sel_init(size_t selrefCount)
 
 static SEL sel_alloc(const char *name, bool copy)
 {
-    selLock.assertLocked();
+    selLock.assertWriting();
     return (SEL)(copy ? strdupIfMutable(name) : name);    
 }
 
@@ -105,7 +107,7 @@ static SEL sel_alloc(const char *name, bool copy)
 const char *sel_getName(SEL sel) 
 {
     if (!sel) return "<null selector>";
-    return (const char *)(const void*)sel;
+    return (const char *)(const void*)sel;  // note: selector 就是一个字符串
 }
 
 
@@ -117,15 +119,15 @@ BOOL sel_isMapped(SEL sel)
 
     if (sel == search_builtins(name)) return YES;
 
-    mutex_locker_t lock(selLock);
+    rwlock_reader_t lock(selLock);
     if (namedSelectors) {
         return (sel == (SEL)NXMapGet(namedSelectors, name));
     }
     return false;
 }
 
-// note: 在内置 selector hash 表中查找
-static SEL search_builtins(const char *name) 
+
+static SEL search_builtins(const char *name) // note: 在内置 selector hash 表中查找
 {
 #if SUPPORT_PREOPT
     if (builtins) return (SEL)builtins->get(name);
@@ -133,30 +135,37 @@ static SEL search_builtins(const char *name)
     return nil;
 }
 
-// note: 通过字符串获取 selector，进行 SEL 的内存地址唯一化，不同 name 的 SEL 内存地址都不同
-static SEL __sel_registerName(const char *name, bool shouldLock, bool copy) 
+
+static SEL __sel_registerName(const char *name, int lock, int copy) // note: 通过字符串获取 selector，进行 SEL 的内存地址唯一化，不同 name 的 SEL 内存地址都不同
 {
     SEL result = 0;
 
-    if (shouldLock) selLock.assertUnlocked();
-    else selLock.assertLocked();
+    if (lock) selLock.assertUnlocked();
+    else selLock.assertWriting();
 
     if (!name) return (SEL)0;
 
     result = search_builtins(name);
     if (result) return result;
     
-    conditional_mutex_locker_t lock(selLock, shouldLock);
+    if (lock) selLock.read();
     if (namedSelectors) {
-        result = (SEL)NXMapGet(namedSelectors, name);   // note: 在缓存中查找
+        result = (SEL)NXMapGet(namedSelectors, name); // note: 在缓存中查找
     }
+    if (lock) selLock.unlockRead();
     if (result) return result;
 
     // No match. Insert.
 
+    if (lock) selLock.write();
+
     if (!namedSelectors) {
         namedSelectors = NXCreateMapTable(NXStrValueMapPrototype, 
                                           (unsigned)SelrefCount);
+    }
+    if (lock) {
+        // Rescan in case it was added while we dropped the lock
+        result = (SEL)NXMapGet(namedSelectors, name);
     }
     if (!result) {
         result = sel_alloc(name, copy); // note: 如果需要 copy 且 string 的内存是可变的，则创建新 string，保证不同的 SEL 内存地址都不同
@@ -164,6 +173,7 @@ static SEL __sel_registerName(const char *name, bool shouldLock, bool copy)
         NXMapInsert(namedSelectors, sel_getName(result), result);
     }
 
+    if (lock) selLock.unlockWrite();
     return result;
 }
 
@@ -174,6 +184,16 @@ SEL sel_registerName(const char *name) {
 
 SEL sel_registerNameNoLock(const char *name, bool copy) {
     return __sel_registerName(name, 0, copy);  // NO lock, maybe copy
+}
+
+void sel_lock(void)
+{
+    selLock.write();
+}
+
+void sel_unlock(void)
+{
+    selLock.unlockWrite();
 }
 
 

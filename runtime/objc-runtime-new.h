@@ -36,15 +36,8 @@ struct swift_class_t;
 
 struct bucket_t {
 private:
-    // IMP-first is better for arm64e ptrauth and no worse for arm64.
-    // SEL-first is better for armv7* and i386 and x86_64.
-#if __arm64__
-    MethodCacheIMP _imp;
     cache_key_t _key;
-#else
-    cache_key_t _key;
-    MethodCacheIMP _imp;
-#endif
+    IMP _imp;
 
 public:
     inline cache_key_t key() const { return _key; }
@@ -58,8 +51,8 @@ public:
 
 struct cache_t {
     struct bucket_t *_buckets;  // note: 缓存列表
-    mask_t _mask;               // note: hash key 的 mask
-    mask_t _occupied;           // note: 已缓存的数量
+    mask_t _mask;   // note: hash key 的 mask
+    mask_t _occupied;   // note: 已缓存的数量
 
 public:
     struct bucket_t *buckets();
@@ -119,19 +112,11 @@ struct entsize_list_tt {
     }
 
     size_t byteSize() const {
-        return byteSize(entsize(), count);
-    }
-    
-    static size_t byteSize(uint32_t entsize, uint32_t count) {
-        return sizeof(entsize_list_tt) + (count-1)*entsize;
+        return sizeof(*this) + (count-1)*entsize();
     }
 
     List *duplicate() const {
-        auto *dup = (List *)calloc(this->byteSize(), 1);
-        dup->entsizeAndFlags = this->entsizeAndFlags;
-        dup->count = this->count;
-        std::copy(begin(), end(), dup->begin());
-        return dup;
+        return (List *)memdup(this, this->byteSize());
     }
 
     struct iterator;
@@ -222,7 +207,7 @@ struct entsize_list_tt {
 struct method_t {
     SEL name;
     const char *types;
-    MethodListIMP imp;
+    IMP imp;
 
     struct SortBySELAddress :
         public std::binary_function<const method_t&,
@@ -470,14 +455,12 @@ struct locstamped_category_list_t {
 #if SUPPORT_NONPOINTER_ISA
 #define RW_REQUIRES_RAW_ISA   (1<<15)
 #endif
+
+// class is a Swift class
+#define FAST_IS_SWIFT         (1UL<<0)
 // class or superclass has default retain/release/autorelease/retainCount/
 //   _tryRetain/_isDeallocating/retainWeakReference/allowsWeakReference
-#define RW_HAS_DEFAULT_RR     (1<<14)
-
-// class is a Swift class from the pre-stable Swift ABI
-#define FAST_IS_SWIFT_LEGACY  (1UL<<0)
-// class is a Swift class from the stable Swift ABI
-#define FAST_IS_SWIFT_STABLE  (1UL<<1)
+#define FAST_HAS_DEFAULT_RR   (1UL<<1)
 // data pointer
 #define FAST_DATA_MASK        0xfffffffcUL
 
@@ -491,29 +474,27 @@ struct locstamped_category_list_t {
 // class or superclass has default alloc/allocWithZone: implementation
 // Note this is is stored in the metaclass.
 #define RW_HAS_DEFAULT_AWZ    (1<<16)
-// class's instances requires raw isa
-#define RW_REQUIRES_RAW_ISA   (1<<15)
 
-// class is a Swift class from the pre-stable Swift ABI
-#define FAST_IS_SWIFT_LEGACY    (1UL<<0)
-// class is a Swift class from the stable Swift ABI
-#define FAST_IS_SWIFT_STABLE    (1UL<<1)
+// class is a Swift class
+#define FAST_IS_SWIFT           (1UL<<0)
 // class or superclass has default retain/release/autorelease/retainCount/
 //   _tryRetain/_isDeallocating/retainWeakReference/allowsWeakReference
-#define FAST_HAS_DEFAULT_RR     (1UL<<2)
+#define FAST_HAS_DEFAULT_RR     (1UL<<1)
+// class's instances requires raw isa
+#define FAST_REQUIRES_RAW_ISA   (1UL<<2)
 // data pointer
 #define FAST_DATA_MASK          0x00007ffffffffff8UL
 
 #else
 // Leaks-incompatible version that steals lots of bits.
 
-// class is a Swift class from the pre-stable Swift ABI
-#define FAST_IS_SWIFT_LEGACY    (1UL<<0)
-// class is a Swift class from the stable Swift ABI
-#define FAST_IS_SWIFT_STABLE    (1UL<<1)
-// summary bit for fast alloc path: !hasCxxCtor and 
-//   !instancesRequireRawIsa and instanceSize fits into shiftedSize
-#define FAST_ALLOC              (1UL<<2)
+// class is a Swift class
+#define FAST_IS_SWIFT           (1UL<<0)
+// class's instances requires raw isa
+#define FAST_REQUIRES_RAW_ISA   (1UL<<1)
+// class or superclass has .cxx_destruct implementation
+//   This bit is aligned with isa_t->hasCxxDtor to save an instruction.
+#define FAST_HAS_CXX_DTOR       (1UL<<2)
 // data pointer
 #define FAST_DATA_MASK          0x00007ffffffffff8UL
 // class or superclass has .cxx_construct implementation
@@ -524,15 +505,13 @@ struct locstamped_category_list_t {
 // class or superclass has default retain/release/autorelease/retainCount/
 //   _tryRetain/_isDeallocating/retainWeakReference/allowsWeakReference
 #define FAST_HAS_DEFAULT_RR     (1UL<<49)
-// class's instances requires raw isa
-//   This bit is aligned with isa_t->hasCxxDtor to save an instruction.
-#define FAST_REQUIRES_RAW_ISA   (1UL<<50)
-// class or superclass has .cxx_destruct implementation
-#define FAST_HAS_CXX_DTOR       (1UL<<51)
+// summary bit for fast alloc path: !hasCxxCtor and 
+//   !instancesRequireRawIsa and instanceSize fits into shiftedSize
+#define FAST_ALLOC              (1UL<<50)
 // instance size in units of 16 bytes
 //   or 0 if the instance size is too big in this field
 //   This field must be LAST
-#define FAST_SHIFTED_SIZE_SHIFT 52
+#define FAST_SHIFTED_SIZE_SHIFT 51
 
 // FAST_ALLOC means
 //   FAST_HAS_CXX_CTOR is set
@@ -544,10 +523,6 @@ struct locstamped_category_list_t {
 #define FAST_ALLOC_VALUE (0)
 
 #endif
-
-// The Swift ABI requires that these bits be defined like this on all platforms.
-static_assert(FAST_IS_SWIFT_LEGACY == 1, "resistance is futile");
-static_assert(FAST_IS_SWIFT_STABLE == 2, "resistance is futile");
 
 // note: 类定义时的 method、protocol、ivar、property 信息。编译时确定的 read-only 数据，保存在 Mach-O 文件的 __objc_const 节中；realizeClass 之前，objc_class->data() 返回的是 class_ro_t，在 realizeClass 中被保存到 class_rw_t->ro 上
 struct class_ro_t {
@@ -822,7 +797,7 @@ class protocol_array_t :
     }
 };
 
-
+// note: 保存类的 method、property、protocol、category 数组。用 runtime 修改类信息时作用在 class_rw_t 上
 struct class_rw_t {
     // Be warned that Symbolication knows the layout of this structure.
     uint32_t flags;
@@ -834,8 +809,8 @@ struct class_rw_t {
     property_array_t properties;
     protocol_array_t protocols;
 
-    Class firstSubclass;
-    Class nextSiblingClass;
+    Class firstSubclass;    // note: 第一个子类，在 realizeClass 时设置，哪个子类先使用就设为哪个
+    Class nextSiblingClass; // note: 下一个兄弟类，在 realizeClass 时设置，哪个兄弟类先使用就设为哪个
 
     char *demangledName;
 
@@ -933,7 +908,6 @@ public:
         bits = newBits;
     }
 
-#if FAST_HAS_DEFAULT_RR
     bool hasDefaultRR() {
         return getBit(FAST_HAS_DEFAULT_RR);
     }
@@ -943,17 +917,6 @@ public:
     void setHasCustomRR() {
         clearBits(FAST_HAS_DEFAULT_RR);
     }
-#else
-    bool hasDefaultRR() {
-        return data()->flags & RW_HAS_DEFAULT_RR;
-    }
-    void setHasDefaultRR() {
-        data()->setFlags(RW_HAS_DEFAULT_RR);
-    }
-    void setHasCustomRR() {
-        data()->clearFlags(RW_HAS_DEFAULT_RR);
-    }
-#endif
 
 #if FAST_HAS_DEFAULT_AWZ
     bool hasDefaultAWZ() {
@@ -1088,22 +1051,12 @@ public:
 #endif
     }
 
-    bool isAnySwift() {
-        return isSwiftStable() || isSwiftLegacy();
+    bool isSwift() {
+        return getBit(FAST_IS_SWIFT);
     }
 
-    bool isSwiftStable() {
-        return getBit(FAST_IS_SWIFT_STABLE);
-    }
-    void setIsSwiftStable() {
-        setBits(FAST_IS_SWIFT_STABLE);
-    }
-
-    bool isSwiftLegacy() {
-        return getBit(FAST_IS_SWIFT_LEGACY);
-    }
-    void setIsSwiftLegacy() {
-        setBits(FAST_IS_SWIFT_LEGACY);
+    void setIsSwift() {
+        setBits(FAST_IS_SWIFT);
     }
 };
 
@@ -1115,7 +1068,7 @@ struct objc_class : objc_object {
     class_data_bits_t bits;    // class_rw_t * plus custom rr/alloc flags
 
     class_rw_t *data() { 
-        return bits.data();
+        return bits.data(); // note: realizeClass 之前返回的是 class_ro_t *，realizeClass 之后返回 class_rw_t *
     }
     void setData(class_rw_t *newData) {
         bits.setData(newData);
@@ -1193,16 +1146,8 @@ struct objc_class : objc_object {
     }
 
 
-    bool isSwiftStable() {
-        return bits.isSwiftStable();
-    }
-
-    bool isSwiftLegacy() {
-        return bits.isSwiftLegacy();
-    }
-
-    bool isAnySwift() {
-        return bits.isAnySwift();
+    bool isSwift() {
+        return bits.isSwift();
     }
 
 
@@ -1389,7 +1334,7 @@ struct category_t {
     struct property_list_t *_classProperties;
 
     method_list_t *methodsForMeta(bool isMeta) {
-        if (isMeta) return classMethods;    // note: 元类中保存类方法
+        if (isMeta) return classMethods; // note: 元类中保存类方法
         else return instanceMethods;
     }
 
@@ -1413,7 +1358,7 @@ static inline void
 foreach_realized_class_and_subclass_2(Class top, unsigned& count,
                                       std::function<bool (Class)> code) 
 {
-    // runtimeLock.assertLocked();
+    // runtimeLock.assertWriting();
     assert(top);
     Class cls = top;
     while (1) {

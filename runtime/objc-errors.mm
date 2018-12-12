@@ -76,6 +76,8 @@ void _objc_error(id rcv, const char *fmt, va_list args)
 
 #include <_simple.h>
 
+OBJC_EXPORT void	(*_error)(id, const char *, va_list);
+
 // Return true if c is a UTF8 continuation byte
 static bool isUTF8Continuation(char c)
 {
@@ -102,8 +104,7 @@ static void _objc_crashlog(const char *message)
 
     mutex_locker_t lock(crashlog_lock);
 
-    char *oldmsg = nil;
-    // (char *)CRGetCrashLogMessage();
+    char *oldmsg = (char *)CRGetCrashLogMessage();
     size_t oldlen;
     const size_t limit = 8000;
 
@@ -125,8 +126,7 @@ static void _objc_crashlog(const char *message)
         if (*c == '\n') *c = '\0';
         
         if (oldmsg) free(oldmsg);
-        free(newmsg);
-//        CRSetCrashLogMessage(newmsg);
+        CRSetCrashLogMessage(newmsg);
     }
 }
 

@@ -106,8 +106,7 @@ objc_object::isBasicTaggedPointer()
 inline bool 
 objc_object::isExtTaggedPointer() 
 {
-    uintptr_t ptr = _objc_decodeTaggedPointer(this);
-    return (ptr & _OBJC_TAG_EXT_MASK) == _OBJC_TAG_EXT_MASK;
+    return ((uintptr_t)this & _OBJC_TAG_EXT_MASK) == _OBJC_TAG_EXT_MASK;
 }
 
 

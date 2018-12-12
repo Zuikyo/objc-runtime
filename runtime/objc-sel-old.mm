@@ -77,34 +77,41 @@ BOOL sel_isMapped(SEL name)
     sel = _objc_search_builtins((const char *)name);
     if (sel) return YES;
 
-    mutex_locker_t lock(selLock);
+    rwlock_reader_t lock(selLock);
     if (_objc_selectors) {
         sel = __objc_sel_set_get(_objc_selectors, name);
     }
     return bool(sel);
 }
 
-static SEL __sel_registerName(const char *name, bool shouldLock, bool copy) 
+static SEL __sel_registerName(const char *name, int lock, int copy) 
 {
     SEL result = 0;
 
-    if (shouldLock) selLock.assertUnlocked();
-    else selLock.assertLocked();
+    if (lock) selLock.assertUnlocked();
+    else selLock.assertWriting();
 
     if (!name) return (SEL)0;
     result = _objc_search_builtins(name);
     if (result) return result;
-
-    conditional_mutex_locker_t lock(selLock, shouldLock);
+    
+    if (lock) selLock.read();
     if (_objc_selectors) {
         result = __objc_sel_set_get(_objc_selectors, (SEL)name);
     }
+    if (lock) selLock.unlockRead();
     if (result) return result;
 
     // No match. Insert.
 
+    if (lock) selLock.write();
+
     if (!_objc_selectors) {
         _objc_selectors = __objc_sel_set_create(SelrefCount);
+    }
+    if (lock) {
+        // Rescan in case it was added while we dropped the lock
+        result = __objc_sel_set_get(_objc_selectors, (SEL)name);
     }
     if (!result) {
         result = (SEL)(copy ? strdup(name) : name);
@@ -114,6 +121,7 @@ static SEL __sel_registerName(const char *name, bool shouldLock, bool copy)
 #endif
     }
 
+    if (lock) selLock.unlockWrite();
     return result;
 }
 
@@ -124,6 +132,16 @@ SEL sel_registerName(const char *name) {
 
 SEL sel_registerNameNoLock(const char *name, bool copy) {
     return __sel_registerName(name, 0, copy);  // NO lock, maybe copy
+}
+
+void sel_lock(void)
+{
+    selLock.write();
+}
+
+void sel_unlock(void)
+{
+    selLock.unlockWrite();
 }
 
 
@@ -160,7 +178,7 @@ void sel_init(size_t selrefCount)
 #define s(x) SEL_##x = sel_registerNameNoLock(#x, NO)
 #define t(x,y) SEL_##y = sel_registerNameNoLock(#x, NO)
 
-    mutex_locker_t lock(selLock);
+    sel_lock();
 
     s(load);
     s(initialize);
@@ -185,6 +203,8 @@ void sel_init(size_t selrefCount)
 
     extern SEL FwdSel;
     FwdSel = sel_registerNameNoLock("forward::", NO);
+
+    sel_unlock();
 
 #undef s
 #undef t
