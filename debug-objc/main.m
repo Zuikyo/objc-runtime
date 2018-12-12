@@ -15,6 +15,10 @@
 @end
 @implementation TestClass
 
++ (void)initialize {
+    NSLog(@"TestClass initialize");
+}
+
 - (instancetype)init {
     if (self = [super init]) {
         
@@ -37,6 +41,7 @@
 
 + (void)load {
     // 有 +load 方法的类会保存在 __objc_nlclslist section 中
+    NSLog(@"NonLazyClass load");
 }
 
 @end
@@ -61,6 +66,7 @@
 @implementation TestClass (NonLazyCategory)
 + (void)load {
     // 有 +load 方法的 category 会保存在 __objc_nlcatlist section 中
+    NSLog(@"TestClass category load");
 }
 @end
 
@@ -69,6 +75,9 @@
 
 @end
 @implementation NSObject (TestCategory)
++ (void)load {
+    NSLog(@"NSObject category load");
+}
 + (void)categoryClassMethod {
     
 }
@@ -77,21 +86,31 @@
 }
 @end
 
+void testWeak() {
+    @autoreleasepool {
+        __weak TestClass *weakObject = [TestClass new];
+    }
+}
+
 void testAssociatedObject() {
     TestClass * object = [TestClass new];
     objc_setAssociatedObject(object, "123", @1, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
 void testRetainCount() {
-    NSMutableArray<NSMutableArray *> *arrays = [NSMutableArray array];
     id a = [NSObject new];
-    for (int i = 0; i < 258; i++) {
-        NSMutableArray *array = [NSMutableArray array];
-        [arrays addObject:array];
-        [array addObject:a];
+    @autoreleasepool {
+        NSMutableArray<NSMutableArray *> *arrays = [NSMutableArray array];
+        for (int i = 0; i < 258; i++) {
+            NSMutableArray *array = [NSMutableArray array];
+            [arrays addObject:array];
+            [array addObject:a];
+        }
+        NSInteger rc = CFGetRetainCount((__bridge CFTypeRef)(a));
+        NSLog(@"retain count: %ld", rc);
     }
     NSInteger rc = CFGetRetainCount((__bridge CFTypeRef)(a));
-    NSLog(@"%ld", rc);
+    NSLog(@"retain count: %ld", rc);
 }
 
 int main(int argc, const char * argv[]) {
@@ -99,8 +118,10 @@ int main(int argc, const char * argv[]) {
         // insert code here...
         NSLog(@"Hello, World!");
         
-        testAssociatedObject();
         testRetainCount();
+        testWeak();
+        testAssociatedObject();
+        
     }
     return 0;
 }
