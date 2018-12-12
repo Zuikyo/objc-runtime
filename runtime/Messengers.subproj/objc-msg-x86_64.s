@@ -400,7 +400,7 @@ LExit$0:
 	movq	%a3, %a2
 .endif
 	movq	%r10, %a3
-	call	__class_lookupMethodAndLoadCache3
+	call	__class_lookupMethodAndLoadCache3	// note: 调用 _class_lookupMethodAndLoadCache3
 
 	// IMP is now in %rax
 	movq	%rax, %r11
@@ -661,10 +661,10 @@ _objc_debug_taggedpointer_ext_classes:
 	ENTRY _objc_msgSend
 	UNWIND _objc_msgSend, NoFrame
 
-	NilTest	NORMAL
+	NilTest	NORMAL			// note: 检查 nil
 
 	GetIsaFast NORMAL		// r10 = self->isa
-	CacheLookup NORMAL, CALL	// calls IMP on success
+	CacheLookup NORMAL, CALL	// calls IMP on success	// note: 查找缓存
 
 	NilTestReturnZero NORMAL
 
@@ -673,7 +673,7 @@ _objc_debug_taggedpointer_ext_classes:
 // cache miss: go search the method lists
 LCacheMiss:
 	// isa still in r10
-	jmp	__objc_msgSend_uncached
+	jmp	__objc_msgSend_uncached	// note: 没有缓存的情况
 
 	END_ENTRY _objc_msgSend
 

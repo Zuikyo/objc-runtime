@@ -447,7 +447,7 @@ LMsgSendHitInstrumentDone_$0_$1_$2:
 	movl	%eax, 8(%esp)		// class
 	movl	%ecx, 4(%esp)		// selector
 	movl	%edx, 0(%esp)		// receiver
-	call	__class_lookupMethodAndLoadCache3
+	call	__class_lookupMethodAndLoadCache3   // note: 见 _class_lookupMethodAndLoadCache3
 
 	movdqa  4*16(%esp), %xmm3
 	movdqa  3*16(%esp), %xmm2

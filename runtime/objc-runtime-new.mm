@@ -681,7 +681,7 @@ static bool isBundleClass(Class cls)
     return cls->data()->ro->flags & RO_FROM_BUNDLE;
 }
 
-// note: 缓存 selector，对 method list 的 selector 进行内存地址唯一化，按照 selector 的地址进行排序
+// note: 对 method list 的 selector 进行内存地址唯一化，按照 selector 的地址进行排序
 static void 
 fixupMethodList(method_list_t *mlist, bool bundleCopy, bool sort)
 {
@@ -804,7 +804,7 @@ attachCategories(Class cls, category_list *cats, bool flush_caches)
 
     auto rw = cls->data();
 
-    prepareMethodLists(cls, mlists, mcount, NO, fromBundle);
+    prepareMethodLists(cls, mlists, mcount, NO, fromBundle);    // note: 对 method list 按照 selector 的地址进行排序
     rw->methods.attachLists(mlists, mcount);
     free(mlists);
     if (flush_caches  &&  mcount > 0) flushCaches(cls);
@@ -837,10 +837,10 @@ static void methodizeClass(Class cls)
                      cls->nameForLogging(), isMeta ? "(meta)" : "");
     }
 
-    // Install methods and properties that the class implements itself.
+    // Install methods and properties that the class implements itself. // note: 把 class_ro_t 中的信息复制到 class_rw_t
     method_list_t *list = ro->baseMethods();
     if (list) {
-        prepareMethodLists(cls, &list, 1, YES, isBundleClass(cls));
+        prepareMethodLists(cls, &list, 1, YES, isBundleClass(cls)); // note: 对 method list 按照 selector 的地址进行排序
         rw->methods.attachLists(&list, 1);
     }
 
@@ -863,7 +863,7 @@ static void methodizeClass(Class cls)
 
     // Attach categories.
     category_list *cats = unattachedCategoriesForClass(cls, true /*realizing*/);
-    attachCategories(cls, cats, false /*don't flush caches*/);
+    attachCategories(cls, cats, false /*don't flush caches*/);  // note: 添加 category
 
     if (PrintConnecting) {
         if (cats) {
@@ -1903,8 +1903,8 @@ static Class realizeClass(Class cls)
     // Realize superclass and metaclass, if they aren't already.
     // This needs to be done after RW_REALIZED is set above, for root classes.
     // This needs to be done after class index is chosen, for root metaclasses.
-    supercls = realizeClass(remapClass(cls->superclass));   // note: 首先初始化父类和元类
-    metacls = realizeClass(remapClass(cls->ISA()));
+    supercls = realizeClass(remapClass(cls->superclass));   // note: 首先初始化父类
+    metacls = realizeClass(remapClass(cls->ISA()));         // note: 先初始化元类
 
 #if SUPPORT_NONPOINTER_ISA
     // Disable non-pointer isa for some classes and/or platforms.
@@ -1960,14 +1960,14 @@ static Class realizeClass(Class cls)
         }
     }
 
-    // Connect this class to its superclass's subclass lists
+    // Connect this class to its superclass's subclass lists    // note: 设置类之间的树形关系，方便之后遍历
     if (supercls) {
         addSubclass(supercls, cls);
     } else {
         addRootClass(cls);
     }
 
-    // Attach categories
+    // Attach categories    // note: 设置 class_rw_t，添加 category
     methodizeClass(cls);
 
     return cls;

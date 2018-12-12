@@ -29,7 +29,7 @@
     
 }
 - (void)instanceMethod {
-    
+    NSLog(@"instanceMethod");
 }
 @end
 
@@ -55,6 +55,9 @@
 }
 - (void)categoryInstanceMethod {
     
+}
+- (void)instanceMethod {
+    NSLog(@"override instanceMethod in category");
 }
 @end
 
@@ -84,6 +87,11 @@
     
 }
 @end
+
+void testOverrideInCategory() {
+    TestClass *object = [TestClass new];
+    [object instanceMethod];
+}
 
 void testWeak() {
     @autoreleasepool {
@@ -118,6 +126,7 @@ int main(int argc, const char * argv[]) {
         NSLog(@"Hello, World!");
         
         testRetainCount();
+        testOverrideInCategory();
         testWeak();
         testAssociatedObject();
         
