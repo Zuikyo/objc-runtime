@@ -57,9 +57,9 @@ public:
 
 
 struct cache_t {
-    struct bucket_t *_buckets;
-    mask_t _mask;
-    mask_t _occupied;
+    struct bucket_t *_buckets;  // note: 缓存列表
+    mask_t _mask;               // note: hash key 的 mask
+    mask_t _occupied;           // note: 已缓存的数量
 
 public:
     struct bucket_t *buckets();
@@ -1389,7 +1389,7 @@ struct category_t {
     struct property_list_t *_classProperties;
 
     method_list_t *methodsForMeta(bool isMeta) {
-        if (isMeta) return classMethods;
+        if (isMeta) return classMethods;    // note: 元类中保存类方法
         else return instanceMethods;
     }
 

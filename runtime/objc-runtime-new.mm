@@ -681,7 +681,7 @@ static bool isBundleClass(Class cls)
     return cls->data()->ro->flags & RO_FROM_BUNDLE;
 }
 
-
+// note: 缓存 selector，对 method list 的 selector 进行内存地址唯一化，按照 selector 的地址进行排序
 static void 
 fixupMethodList(method_list_t *mlist, bool bundleCopy, bool sort)
 {
@@ -755,7 +755,7 @@ prepareMethodLists(Class cls, method_list_t **addedLists, int addedCount,
     }
 }
 
-
+// note: 把 category 信息添加到类的 class_rw_t 上
 // Attach method lists and properties and protocols from categories to a class.
 // Assumes the categories in cats are all loaded and sorted by load order, 
 // oldest categories first.
@@ -1353,7 +1353,7 @@ static Class remapClass(Class cls)
     Class c2;
 
     if (!cls) return nil;
-
+    // note: 用于处理 CoreFoundation toll-bridging 的类，在标为 future class 后会 realloc，因此需要指向最新的内存
     NXMapTable *map = remappedClasses(NO);
     if (!map  ||  NXMapMember(map, cls, (void**)&c2) == NX_MAPNOTAKEY) {
         return cls;
@@ -1830,7 +1830,7 @@ static void reconcileInstanceVariables(Class cls, Class supercls, const class_ro
     // fixme can optimize for "class has no new ivars", etc
 
     if (ro->instanceStart < super_ro->instanceSize) {
-        // Superclass has changed size. This class's ivars must move.
+        // Superclass has changed size. This class's ivars must move.   // note: superclass 的实例变量有修改，当前 class 需要调整
         // Also slide layout bits in parallel.
         // This code is incapable of compacting the subclass to 
         //   compensate for a superclass that shrunk, so don't do that.
@@ -1878,7 +1878,7 @@ static Class realizeClass(Class cls)
         ro = cls->data()->ro;
         cls->changeInfo(RW_REALIZED|RW_REALIZING, RW_FUTURE);
     } else {
-        // Normal class. Allocate writeable class data.
+        // Normal class. Allocate writeable class data. // note: 为 rw 创建内存
         rw = (class_rw_t *)calloc(sizeof(class_rw_t), 1);
         rw->ro = ro;
         rw->flags = RW_REALIZED|RW_REALIZING;
@@ -1903,7 +1903,7 @@ static Class realizeClass(Class cls)
     // Realize superclass and metaclass, if they aren't already.
     // This needs to be done after RW_REALIZED is set above, for root classes.
     // This needs to be done after class index is chosen, for root metaclasses.
-    supercls = realizeClass(remapClass(cls->superclass));
+    supercls = realizeClass(remapClass(cls->superclass));   // note: 首先初始化父类和元类
     metacls = realizeClass(remapClass(cls->ISA()));
 
 #if SUPPORT_NONPOINTER_ISA
@@ -1947,7 +1947,7 @@ static Class realizeClass(Class cls)
 
     // Reconcile instance variable offsets / layout.
     // This may reallocate class_ro_t, updating our ro variable.
-    if (supercls  &&  !isMeta) reconcileInstanceVariables(cls, supercls, ro);
+    if (supercls  &&  !isMeta) reconcileInstanceVariables(cls, supercls, ro);   // note: 重对齐实例变量偏移地址
 
     // Set fastInstanceSize if it wasn't set already.
     cls->setInstanceSize(ro->instanceSize);
@@ -2165,7 +2165,7 @@ map_images(unsigned count, const char * const paths[],
 
 /***********************************************************************
 * load_images
-* Process +load in the given images which are being mapped in by dyld.
+* Process +load in the given images which are being mapped in by dyld. // note: 处理 +load 方法
 *
 * Locking: write-locks runtimeLock and loadMethodLock
 **********************************************************************/
@@ -2407,7 +2407,7 @@ readProtocol(protocol_t *newproto, Class protocol_class,
         // New protocol from an un-preoptimized image
         // with sufficient storage. Fix it up in place.
         // fixme duplicate protocols from unloadable bundle
-        newproto->initIsa(protocol_class);  // fixme pinned
+        newproto->initIsa(protocol_class);  // fixme pinned // note: 设置 protocol 的父类
         insertFn(protocol_map, newproto->mangledName, newproto);
         if (PrintProtocols) {
             _objc_inform("PROTOCOLS: protocol at %p is %s",
@@ -2591,7 +2591,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 
     ts.log("IMAGE TIMES: remap classes");
 
-    // Fix up @selector references
+    // Fix up @selector references  // note: 注册所有 selector，内存唯一化
     static size_t UnfixedSelectors;
     {
         mutex_locker_t lock(selLock);
@@ -2628,7 +2628,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
     ts.log("IMAGE TIMES: fix up objc_msgSend_fixup");
 #endif
 
-    // Discover protocols. Fix up protocol refs.
+    // Discover protocols. Fix up protocol refs.    // note: 初始化所有 protocol_t
     for (EACH_HEADER) {
         extern objc_class OBJC_CLASS_$_Protocol;
         Class cls = (Class)&OBJC_CLASS_$_Protocol;
@@ -2646,7 +2646,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 
     ts.log("IMAGE TIMES: discover protocols");
 
-    // Fix up @protocol references
+    // Fix up @protocol references      // note: 处理所有 protocol_t *，处理 protocol_t 内存被重新创建的情况，让指针指向最新的内存
     // Preoptimized images may have the right 
     // answer already but we don't know for sure.
     for (EACH_HEADER) {
@@ -2658,7 +2658,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
 
     ts.log("IMAGE TIMES: fix up @protocol references");
 
-    // Realize non-lazy classes (for +load methods and static instances)
+    // Realize non-lazy classes (for +load methods and static instances)    // note: +load 之前 realize
     for (EACH_HEADER) {
         classref_t *classlist = 
             _getObjc2NonlazyClassList(hi, &count);
@@ -2730,7 +2730,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
             if (cat->instanceMethods ||  cat->protocols  
                 ||  cat->instanceProperties) 
             {
-                addUnattachedCategoryForClass(cat, cls, hi);
+                addUnattachedCategoryForClass(cat, cls, hi);    // note: 记录待处理的 category，在 realizeClass 的时候处理
                 if (cls->isRealized()) {
                     remethodizeClass(cls);
                     classExists = YES;
@@ -2847,7 +2847,7 @@ static void schedule_class_load(Class cls)
 
     if (cls->data()->flags & RW_LOADED) return;
 
-    // Ensure superclass-first ordering
+    // Ensure superclass-first ordering // note: 先调用父类的 +load
     schedule_class_load(cls->superclass);
 
     add_class_to_loadable_list(cls);
@@ -2880,7 +2880,7 @@ void prepare_load_methods(const headerType *mhdr)
         category_t *cat = categorylist[i];
         Class cls = remapClass(cat->cls);
         if (!cls) continue;  // category for ignored weak-linked class
-        realizeClass(cls);
+        realizeClass(cls);  // note: +load 之前 realize
         assert(cls->ISA()->isRealized());
         add_category_to_loadable_list(cat);
     }
@@ -3036,7 +3036,7 @@ _method_setImplementation(Class cls, method_t *m, IMP imp)
     // RR/AWZ updates are slow if cls is nil (i.e. unknown)
     // fixme build list of classes whose Methods are known externally?
 
-    flushCaches(cls);
+    flushCaches(cls);   // note: 更新缓存
 
     updateCustomRR_AWZ(cls, m);
 
@@ -4704,9 +4704,9 @@ static method_t *search_method_list(const method_list_t *mlist, SEL sel)
     int methodListHasExpectedSize = mlist->entsize() == sizeof(method_t);
     
     if (__builtin_expect(methodListIsFixedUp && methodListHasExpectedSize, 1)) {
-        return findMethodInSortedMethodList(sel, mlist);
+        return findMethodInSortedMethodList(sel, mlist);    // note: 在排序后的 method list 中进行二分查找
     } else {
-        // Linear search of unsorted method list
+        // Linear search of unsorted method list    // note: 在未排序的 method list 中线性查找
         for (auto& meth : *mlist) {
             if (meth.name == sel) return &meth;
         }
@@ -4865,7 +4865,7 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
 
     runtimeLock.assertUnlocked();
 
-    // Optimistic cache lookup
+    // Optimistic cache lookup  // note: 乐观缓存查找
     if (cache) {
         imp = cache_getImp(cls, sel);
         if (imp) return imp;
@@ -4903,20 +4903,20 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
 
     // Try this class's cache.
 
-    imp = cache_getImp(cls, sel);
+    imp = cache_getImp(cls, sel);   // note: 从缓存中查找
     if (imp) goto done;
 
-    // Try this class's method lists.
+    // Try this class's method lists.   // note: 在当前类的 method list 中查找
     {
         Method meth = getMethodNoSuper_nolock(cls, sel);
         if (meth) {
-            log_and_fill_cache(cls, meth->imp, sel, inst, cls);
+            log_and_fill_cache(cls, meth->imp, sel, inst, cls); // note: 找到后进行缓存
             imp = meth->imp;
             goto done;
         }
     }
 
-    // Try superclass caches and method lists.
+    // Try superclass caches and method lists.  // note: 在父类的缓存和 method list 中查找
     {
         unsigned attempts = unreasonableClassCount();
         for (Class curClass = cls->superclass;
@@ -4954,7 +4954,7 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
         }
     }
 
-    // No implementation found. Try method resolver once.
+    // No implementation found. Try method resolver once.   // note: 未找到方法，调用 resolveMethod 允许动态添加方法
 
     if (resolver  &&  !triedResolver) {
         runtimeLock.unlock();
@@ -4963,7 +4963,7 @@ IMP lookUpImpOrForward(Class cls, SEL sel, id inst,
         // Don't cache the result; we don't hold the lock so it may have 
         // changed already. Re-do the search from scratch instead.
         triedResolver = YES;
-        goto retry;
+        goto retry; // note: 重试一次查找
     }
 
     // No implementation found, and method resolver didn't help. 
@@ -6653,8 +6653,8 @@ void *objc_destructInstance(id obj)
         bool assoc = obj->hasAssociatedObjects();
 
         // This order is important.
-        if (cxx) object_cxxDestruct(obj);
-        if (assoc) _object_remove_assocations(obj);
+        if (cxx) object_cxxDestruct(obj);   // note: 调用 .cxx_destruct，释放 ivar
+        if (assoc) _object_remove_assocations(obj);     // note: 移除 associate object
         obj->clearDeallocating();
     }
 

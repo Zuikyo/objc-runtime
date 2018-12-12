@@ -756,7 +756,7 @@ class StripedMap {
         T value alignas(CacheLineSize);
     };
 
-    PaddedT array[StripeCount];
+    PaddedT array[StripeCount]; // note: 创建 64 个 T 类型，例如 SideTable
 
     static unsigned int indexForPointer(const void *p) {
         uintptr_t addr = reinterpret_cast<uintptr_t>(p);
@@ -765,10 +765,10 @@ class StripedMap {
 
  public:
     T& operator[] (const void *p) { 
-        return array[indexForPointer(p)].value; 
+        return array[indexForPointer(p)].value;     // note: 取值操作
     }
     const T& operator[] (const void *p) const { 
-        return const_cast<StripedMap<T>>(this)[p]; 
+        return const_cast<StripedMap<T>>(this)[p];  // note: 取值操作
     }
 
     // Shortcuts for StripedMaps of locks.

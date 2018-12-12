@@ -124,7 +124,7 @@ BOOL sel_isMapped(SEL sel)
     return false;
 }
 
-
+// note: 在内置 selector hash 表中查找
 static SEL search_builtins(const char *name) 
 {
 #if SUPPORT_PREOPT
@@ -148,7 +148,7 @@ static SEL __sel_registerName(const char *name, bool shouldLock, bool copy)
     
     conditional_mutex_locker_t lock(selLock, shouldLock);
     if (namedSelectors) {
-        result = (SEL)NXMapGet(namedSelectors, name);
+        result = (SEL)NXMapGet(namedSelectors, name);   // note: 在缓存中查找
     }
     if (result) return result;
 
@@ -159,7 +159,7 @@ static SEL __sel_registerName(const char *name, bool shouldLock, bool copy)
                                           (unsigned)SelrefCount);
     }
     if (!result) {
-        result = sel_alloc(name, copy);
+        result = sel_alloc(name, copy); // note: 如果需要 copy 且 string 的内存是可变的，则创建新 string，保证不同的 SEL 内存地址都不同
         // fixme choose a better container (hash not map for starters)
         NXMapInsert(namedSelectors, sel_getName(result), result);
     }
