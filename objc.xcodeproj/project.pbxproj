@@ -158,6 +158,11 @@
 		E8923DA3116AB2820071B552 /* a2a3-blocktramps-i386.s in Sources */ = {isa = PBXBuildFile; fileRef = E8923D9E116AB2820071B552 /* a2a3-blocktramps-i386.s */; };
 		E8923DA4116AB2820071B552 /* a2a3-blocktramps-x86_64.s in Sources */ = {isa = PBXBuildFile; fileRef = E8923D9F116AB2820071B552 /* a2a3-blocktramps-x86_64.s */; };
 		E8923DA5116AB2820071B552 /* objc-block-trampolines.mm in Sources */ = {isa = PBXBuildFile; fileRef = E8923DA0116AB2820071B552 /* objc-block-trampolines.mm */; };
+		F867F6EB21C3B8B3001D6718 /* TestClass.m in Sources */ = {isa = PBXBuildFile; fileRef = F867F6EA21C3B8B3001D6718 /* TestClass.m */; };
+		F867F6EE21C3B8FA001D6718 /* TestClass+TestCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = F867F6ED21C3B8FA001D6718 /* TestClass+TestCategory.m */; };
+		F867F6F121C3D6C0001D6718 /* NonLazyClass.m in Sources */ = {isa = PBXBuildFile; fileRef = F867F6F021C3D6C0001D6718 /* NonLazyClass.m */; };
+		F867F6F421C3D6FC001D6718 /* TestClass+NonLazyCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = F867F6F321C3D6FC001D6718 /* TestClass+NonLazyCategory.m */; };
+		F867F6F721C3D7AB001D6718 /* NSObject+TestCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = F867F6F621C3D7AB001D6718 /* NSObject+TestCategory.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -324,6 +329,16 @@
 		E8923D9E116AB2820071B552 /* a2a3-blocktramps-i386.s */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; name = "a2a3-blocktramps-i386.s"; path = "runtime/a2a3-blocktramps-i386.s"; sourceTree = "<group>"; };
 		E8923D9F116AB2820071B552 /* a2a3-blocktramps-x86_64.s */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; name = "a2a3-blocktramps-x86_64.s"; path = "runtime/a2a3-blocktramps-x86_64.s"; sourceTree = "<group>"; };
 		E8923DA0116AB2820071B552 /* objc-block-trampolines.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = "objc-block-trampolines.mm"; path = "runtime/objc-block-trampolines.mm"; sourceTree = "<group>"; };
+		F867F6E921C3B8B3001D6718 /* TestClass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TestClass.h; sourceTree = "<group>"; };
+		F867F6EA21C3B8B3001D6718 /* TestClass.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TestClass.m; sourceTree = "<group>"; };
+		F867F6EC21C3B8FA001D6718 /* TestClass+TestCategory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TestClass+TestCategory.h"; sourceTree = "<group>"; };
+		F867F6ED21C3B8FA001D6718 /* TestClass+TestCategory.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "TestClass+TestCategory.m"; sourceTree = "<group>"; };
+		F867F6EF21C3D6C0001D6718 /* NonLazyClass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NonLazyClass.h; sourceTree = "<group>"; };
+		F867F6F021C3D6C0001D6718 /* NonLazyClass.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NonLazyClass.m; sourceTree = "<group>"; };
+		F867F6F221C3D6FC001D6718 /* TestClass+NonLazyCategory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TestClass+NonLazyCategory.h"; sourceTree = "<group>"; };
+		F867F6F321C3D6FC001D6718 /* TestClass+NonLazyCategory.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "TestClass+NonLazyCategory.m"; sourceTree = "<group>"; };
+		F867F6F521C3D7AB001D6718 /* NSObject+TestCategory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSObject+TestCategory.h"; sourceTree = "<group>"; };
+		F867F6F621C3D7AB001D6718 /* NSObject+TestCategory.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSObject+TestCategory.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -449,6 +464,7 @@
 			isa = PBXGroup;
 			children = (
 				305B27551C7D9E96005AC125 /* main.m */,
+				F867F6F821C3D82D001D6718 /* classes */,
 			);
 			path = "debug-objc";
 			sourceTree = "<group>";
@@ -658,6 +674,23 @@
 				39ABD71F12F0B61800D1054C /* objc-weak.h */,
 			);
 			name = "Project Headers";
+			sourceTree = "<group>";
+		};
+		F867F6F821C3D82D001D6718 /* classes */ = {
+			isa = PBXGroup;
+			children = (
+				F867F6E921C3B8B3001D6718 /* TestClass.h */,
+				F867F6EA21C3B8B3001D6718 /* TestClass.m */,
+				F867F6EC21C3B8FA001D6718 /* TestClass+TestCategory.h */,
+				F867F6ED21C3B8FA001D6718 /* TestClass+TestCategory.m */,
+				F867F6F221C3D6FC001D6718 /* TestClass+NonLazyCategory.h */,
+				F867F6F321C3D6FC001D6718 /* TestClass+NonLazyCategory.m */,
+				F867F6EF21C3D6C0001D6718 /* NonLazyClass.h */,
+				F867F6F021C3D6C0001D6718 /* NonLazyClass.m */,
+				F867F6F521C3D7AB001D6718 /* NSObject+TestCategory.h */,
+				F867F6F621C3D7AB001D6718 /* NSObject+TestCategory.m */,
+			);
+			path = classes;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -883,7 +916,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F867F6EB21C3B8B3001D6718 /* TestClass.m in Sources */,
+				F867F6EE21C3B8FA001D6718 /* TestClass+TestCategory.m in Sources */,
+				F867F6F121C3D6C0001D6718 /* NonLazyClass.m in Sources */,
+				F867F6F421C3D6FC001D6718 /* TestClass+NonLazyCategory.m in Sources */,
 				305B27561C7D9E96005AC125 /* main.m in Sources */,
+				F867F6F721C3D7AB001D6718 /* NSObject+TestCategory.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

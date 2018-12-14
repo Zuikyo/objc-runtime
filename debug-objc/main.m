@@ -7,87 +7,9 @@
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
-// note: 有些文件没有被包含在工程内，因为导入后编译时会和系统头文件冲突
+// note: 有些文件没有被包含在工程内，因为导入后编译时会和系统头文件冲突，例如 oobjc-object.h
 
-@interface TestClass : NSObject
-
-@end
-@implementation TestClass
-
-+ (void)initialize {
-    NSLog(@"TestClass initialize");
-}
-
-- (instancetype)init {
-    if (self = [super init]) {
-        
-    }
-    return self;
-}
-
-+ (void)classMethod {
-    
-}
-- (void)instanceMethod {
-    NSLog(@"instanceMethod");
-}
-@end
-
-@interface NonLazyClass : NSObject
-
-@end
-@implementation NonLazyClass
-
-+ (void)load {
-    // 有 +load 方法的类会保存在 __objc_nlclslist section 中
-    NSLog(@"NonLazyClass load");
-}
-
-@end
-
-// 自定义类的 category
-@interface TestClass (TestCategory)
-
-@end
-@implementation TestClass (TestCategory)
-+ (void)categoryClassMethod {
-    
-}
-- (void)categoryInstanceMethod {
-    
-}
-- (void)instanceMethod {
-    // 编译后，在 __objc_const 的 class_ro_t 的 method list 中，category 的方法排在类中的同名方法的前面，因此会覆盖原方法
-    NSLog(@"override instanceMethod in category");
-}
-@end
-
-// 有 +load 方法的的 category
-@interface TestClass (NonLazyCategory)
-
-@end
-@implementation TestClass (NonLazyCategory)
-+ (void)load {
-    // 有 +load 方法的 category 会保存在 __objc_nlcatlist section 中
-    NSLog(@"TestClass category load");
-}
-@end
-
-// 外部类的 category
-@interface NSObject (TestCategory)
-
-@end
-@implementation NSObject (TestCategory)
-+ (void)load {
-    NSLog(@"NSObject category load");
-}
-+ (void)categoryClassMethod {
-    
-}
-- (void)categoryInstanceMethod {
-    
-}
-@end
+#import "TestClass.h"
 
 void testOverrideInCategory() {
     TestClass *object = [TestClass new];
