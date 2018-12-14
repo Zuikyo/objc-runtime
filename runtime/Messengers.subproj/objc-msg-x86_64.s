@@ -338,40 +338,40 @@ LExit$0:
 .endmacro
 
 
-.macro	CacheLookup
+.macro	CacheLookup	// note: 用 selector 作为 hash key，在 class 的缓存中查找；r10 为 class；参考 bucket_t * cache_t::find(cache_key_t k, id receiver)
 .if $0 != STRET
 	movq	%a2, %r11		// r11 = _cmd
 .else
 	movq	%a3, %r11		// r11 = _cmd
 .endif
-	andl	24(%r10), %r11d		// r11 = _cmd & class->cache.mask
-	shlq	$$4, %r11		// r11 = offset = (_cmd & mask)<<4
-	addq	16(%r10), %r11		// r11 = class->cache.buckets + offset
+	andl	24(%r10), %r11d		// r11 = _cmd & class->cache.mask	// note: _cmd & mask；class->cache.mask 的偏移量是 24
+	shlq	$$4, %r11		// r11 = offset = (_cmd & mask)<<4	// note: 获取 bucket 的下标
+	addq	16(%r10), %r11		// r11 = class->cache.buckets + offset	// note: 获取 bucket
 
 .if $0 != STRET
 	cmpq	(%r11), %a2		// if (bucket->sel != _cmd)
 .else
 	cmpq	(%r11), %a3		// if (bucket->sel != _cmd)
 .endif
-	jne 	1f			//     scan more
+	jne 	1f			//     scan more	// note: 如果 bucket 的 key 和 selector 不等，则继续搜索，跳到 1:
 	// CacheHit must always be preceded by a not-taken `jne` instruction
 	CacheHit $0, $1			// call or return imp
 
 1:
 	// loop
 	cmpq	$$1, (%r11)
-	jbe	3f			// if (bucket->sel <= 1) wrap or miss
+	jbe	3f			// if (bucket->sel <= 1) wrap or miss	// note: 如果 bucket 的 key 等于 0，也就是个空 bucket，则缓存未命中，跳到 3:
 
-	addq	$$16, %r11		// bucket++
+	addq	$$16, %r11		// bucket++	// note: 取下一个 bucket
 2:	
 .if $0 != STRET
 	cmpq	(%r11), %a2		// if (bucket->sel != _cmd)
 .else
 	cmpq	(%r11), %a3		// if (bucket->sel != _cmd)
 .endif
-	jne 	1b			//     scan more
+	jne 	1b			//     scan more	// note: 循环查找
 	// CacheHit must always be preceded by a not-taken `jne` instruction
-	CacheHit $0, $1			// call or return imp
+	CacheHit $0, $1			// call or return imp	// note: bucket 的 key 等于 selector，缓存命中
 
 3:
 	// wrap or miss
@@ -451,7 +451,7 @@ LExit$0:
 	movq	%a3, %a2
 .endif
 	movq	%r10, %a3
-	call	__class_lookupMethodAndLoadCache3
+	call	__class_lookupMethodAndLoadCache3   // note: 调用 _class_lookupMethodAndLoadCache3
 
 	// IMP is now in %rax
 	movq	%rax, %r11
@@ -498,13 +498,13 @@ LExit$0:
 //
 /////////////////////////////////////////////////////////////////////
 
-.macro GetIsaFast
+.macro GetIsaFast	// note: 参考 objc_object::getIsa()
 .if $0 != STRET
-	testb	$$1, %a1b
+	testb	$$1, %a1b	// note: 根据指针末位是否为 1 判断是否是 tagged pointer
 	PN
-	jnz	LGetIsaSlow_f
-	movq	$$0x00007ffffffffff8, %r10
-	andq	(%a1), %r10
+	jnz	LGetIsaSlow_f	// note: 如果是 tagged pointer 则转到 GetIsaSupport
+	movq	$$0x00007ffffffffff8, %r10	// note: 取 ISA_MASK 放到 r10 上
+	andq	(%a1), %r10	// note: a1 就是第一个参数，也就是 self；class = (self->isa.bits & ISA_MASK)，放到 r10
 .else
 	testb	$$1, %a2b
 	PN
@@ -715,20 +715,20 @@ _objc_debug_taggedpointer_ext_classes:
 	UNWIND _objc_msgSend, NoFrame
 	MESSENGER_START
 
-	NilTest	NORMAL
+	NilTest	NORMAL      // note: 检查 nil，如果为 nil 则转到 NilTestReturnZero
 
-	GetIsaFast NORMAL		// r10 = self->isa
-	CacheLookup NORMAL, CALL	// calls IMP on success
+	GetIsaFast NORMAL		// r10 = self->isa  // note: 获取 class 放到 r10；检查是否是 tagged pointer，如果是则转到 GetIsaSupport 里的 LGetIsaSlow
+	CacheLookup NORMAL, CALL	// calls IMP on success // note: 在缓存中查找
 
 	NilTestReturnZero NORMAL
 
-	GetIsaSupport NORMAL
+	GetIsaSupport NORMAL	// note: 获取 tagged pointer 的 class
 
 // cache miss: go search the method lists
 LCacheMiss:
 	// isa still in r10
 	MESSENGER_END_SLOW
-	jmp	__objc_msgSend_uncached
+	jmp	__objc_msgSend_uncached     // note: 缓存中未找到
 
 	END_ENTRY _objc_msgSend
 

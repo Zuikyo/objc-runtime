@@ -640,7 +640,7 @@ attachCategories(Class cls, category_list *cats, bool flush_caches)
     int protocount = 0;
     int i = cats->count;
     bool fromBundle = NO;
-    while (i--) {
+    while (i--) {   // note: 逆序添加，因此在 cats 中后面的 method 会在前面
         auto& entry = cats->list[i];
 
         method_list_t *mlist = entry.cat->methodsForMeta(isMeta);
@@ -1762,8 +1762,8 @@ static Class realizeClass(Class cls)
     // Realize superclass and metaclass, if they aren't already.
     // This needs to be done after RW_REALIZED is set above, for root classes.
     // This needs to be done after class index is chosen, for root metaclasses.
-    supercls = realizeClass(remapClass(cls->superclass));   // note: 首先初始化父类和元类
-    metacls = realizeClass(remapClass(cls->ISA()));
+    supercls = realizeClass(remapClass(cls->superclass));   // note: 首先初始化父类
+    metacls = realizeClass(remapClass(cls->ISA()));         // note: 首先初始化元类
 
 #if SUPPORT_NONPOINTER_ISA
     // Disable non-pointer isa for some classes and/or platforms.
@@ -1819,14 +1819,14 @@ static Class realizeClass(Class cls)
         }
     }
 
-    // Connect this class to its superclass's subclass lists
+    // Connect this class to its superclass's subclass lists    // note: 设置类之间的树形关系，方便之后遍历
     if (supercls) {
         addSubclass(supercls, cls);
     } else {
         addRootClass(cls);
     }
 
-    // Attach categories
+    // Attach categories    // 设置 class_rw_t，添加 category
     methodizeClass(cls);
 
     return cls;
@@ -2581,7 +2581,7 @@ void _read_images(header_info **hList, uint32_t hCount, int totalClasses, int un
             if (cat->instanceMethods ||  cat->protocols  
                 ||  cat->instanceProperties) 
             {
-                addUnattachedCategoryForClass(cat, cls, hi);    // note: 记录待处理的 category，在 realizeClass 的时候处理
+                addUnattachedCategoryForClass(cat, cls, hi);    // note: 记录所有 image 中待处理的 category，在 realizeClass 的时候处理
                 if (cls->isRealized()) {
                     remethodizeClass(cls);
                     classExists = YES;

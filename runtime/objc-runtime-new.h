@@ -51,7 +51,7 @@ public:
 
 struct cache_t {
     struct bucket_t *_buckets;  // note: 缓存列表
-    mask_t _mask;   // note: hash key 的 mask
+    mask_t _mask;   // note: hash key 的 mask，等于缓存的总容量 capacity 减1； 见 void cache_t::reallocate(mask_t oldCapacity, mask_t newCapacity) 和 setBucketsAndMask
     mask_t _occupied;   // note: 已缓存的数量
 
 public:
@@ -711,7 +711,7 @@ class list_array_tt {
             list = addedLists[0];
         } 
         else {
-            // 1 list -> many lists
+            // 1 list -> many lists // note: 插入到列表的最前面，因此后加入的 list （例如 category）会在之前加入的同名方法的前面
             List* oldList = list;
             uint32_t oldCount = oldList ? 1 : 0;
             uint32_t newCount = oldCount + addedCount;
