@@ -215,7 +215,7 @@ void SideTable::unlockTwo<DontHaveOld, DoHaveNew>
 // pointer to this struct because of the extra indirection.
 // Do it the hard way.
 alignas(StripedMap<SideTable>) static uint8_t 
-    SideTableBuf[sizeof(StripedMap<SideTable>)]; // note: 64 * 64 = 4096
+    SideTableBuf[sizeof(StripedMap<SideTable>)]; // note: 64 个 SideTable 的大小
 
 static void SideTableInit() {
     new (SideTableBuf) StripedMap<SideTable>(); // note: 初始化 SideTableBuf，创建一个 StripedMap<SideTable>
@@ -693,19 +693,19 @@ class AutoreleasePoolPage
     // never uses them.
 #   define EMPTY_POOL_PLACEHOLDER ((id*)1)
 
-#   define POOL_BOUNDARY nil    // note: aotorelease pool page 中的节点，每次 pop 会向 nil 之后加入的对象发送 release 消息
+#   define POOL_BOUNDARY nil    // note: push 时加入 autorelease pool page 中的节点，每次 pop 会向 nil 之后加入的对象发送 release 消息
     static pthread_key_t const key = AUTORELEASE_POOL_KEY;
     static uint8_t const SCRIBBLE = 0xA3;  // 0xA3A3A3A3 after releasing
     static size_t const SIZE = 
 #if PROTECT_AUTORELEASEPOOL
         PAGE_MAX_SIZE;  // must be multiple of vm page size
 #else
-        PAGE_MAX_SIZE;  // size and alignment, power of 2
+        PAGE_MAX_SIZE;  // size and alignment, power of 2   // note: 虚拟内存一页的大小
 #endif
     static size_t const COUNT = SIZE / sizeof(id);
 
     magic_t const magic;
-    id *next;
+    id *next;   // note: 下一个添加的对象要存储的地址
     pthread_t const thread;
     AutoreleasePoolPage * const parent;
     AutoreleasePoolPage *child;
@@ -1593,9 +1593,9 @@ objc_object::sidetable_release(bool performDealloc) // note: SideTable 中的引
 
     table.lock();
     RefcountMap::iterator it = table.refcnts.find(this);
-    if (it == table.refcnts.end()) {        // note: 设置 SideTable 中的标志位，表示正在析构
+    if (it == table.refcnts.end()) {        // note: SideTable 中没有找到记录，说明当前引用计数为 1
         do_dealloc = true;
-        table.refcnts[this] = SIDE_TABLE_DEALLOCATING;
+        table.refcnts[this] = SIDE_TABLE_DEALLOCATING;      // note: 设置 SideTable 中的标志位，表示正在析构
     } else if (it->second < SIDE_TABLE_DEALLOCATING) {      // note: 当前引用计数为 1，再减 1，则为 0，需要析构
         // SIDE_TABLE_WEAKLY_REFERENCED may be set. Don't change it.    // note: 不改变 SIDE_TABLE_WEAKLY_REFERENCED 标志位
         do_dealloc = true;
@@ -2311,7 +2311,7 @@ void arr_init(void)
 }
 
 - (BOOL)allowsWeakReference { 
-    return ! [self _isDeallocating]; 
+    return ! [self _isDeallocating];    // note: 析构时不允许创建 weak 引用
 }
 
 - (BOOL)retainWeakReference { 

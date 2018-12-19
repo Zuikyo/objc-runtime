@@ -362,7 +362,7 @@ LExit$0:
 	cmpq	$$1, (%r11)
 	jbe	3f			// if (bucket->sel <= 1) wrap or miss	// note: 如果 bucket 的 key 等于 0，也就是个空 bucket，则缓存未命中，跳到 3:
 
-	addq	$$16, %r11		// bucket++	// note: 取下一个 bucket
+	addq	$$16, %r11		// bucket++	// note: 取下一个 bucket，在 objc-msg-arm64 里是逆序的
 2:	
 .if $0 != STRET
 	cmpq	(%r11), %a2		// if (bucket->sel != _cmd)
@@ -473,7 +473,7 @@ LExit$0:
 	movdqa	-0x10(%rbp), %xmm7
 
 .if $0 == NORMAL
-	cmp	%r11, %r11		// set eq for nonstret forwarding
+	cmp	%r11, %r11		// set eq for nonstret forwarding	// note: 设置状态寄存器，用于在 _objc_msgForward_impcache 中判断是调用 __objc_msgForward_stret 还是 __objc_msgForward
 .else
 	test	%r11, %r11		// set ne for stret forwarding
 .endif

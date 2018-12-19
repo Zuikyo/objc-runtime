@@ -700,7 +700,7 @@ inline id
 objc_object::rootAutorelease()
 {
     if (isTaggedPointer()) return (id)this;
-    if (prepareOptimizedReturn(ReturnAtPlus1)) return (id)this; // note: ARC 优化，减少不必要的 retain、release 操作
+    if (prepareOptimizedReturn(ReturnAtPlus1)) return (id)this; // note: ARC 优化，减少不必要的 autorelease 和 retain 操作
 
     return rootAutorelease2();
 }
@@ -1160,7 +1160,7 @@ setReturnDisposition(ReturnDisposition disposition)
     tls_set_direct(RETURN_DISPOSITION_KEY, (void*)(uintptr_t)disposition);
 }
 
-// note: ARC 优化，减少不必要的 retain、release 操作；如果 retain 之后立即 release，则把对象存到 tls 上
+// note: ARC 优化，减少不必要的 retain、release 操作；如果 autorelease 之后立即 retain（objc_retainAutoreleasedReturnValue、objc_unsafeClaimAutoreleasedReturnValue），则把对象存到 tls 上传递，不执行 autorelease 和 retain
 // Try to prepare for optimized return with the given disposition (+0 or +1).
 // Returns true if the optimized path is successful.
 // Otherwise the return value must be retained and/or autoreleased as usual.

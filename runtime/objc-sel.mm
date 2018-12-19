@@ -136,7 +136,7 @@ static SEL search_builtins(const char *name) // note: 在内置 selector hash �
 }
 
 
-static SEL __sel_registerName(const char *name, int lock, int copy) // note: 通过字符串获取 selector，进行 SEL 的内存地址唯一化，不同 name 的 SEL 内存地址都不同
+static SEL __sel_registerName(const char *name, int lock, int copy) // note: 通过字符串获取 selector，进行 SEL 的内存地址唯一化，不同 name 的 SEL 内存地址都不同，相同 name 的 SEL 都指向同一个 SEL
 {
     SEL result = 0;
 

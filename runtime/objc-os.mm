@@ -881,7 +881,7 @@ void _objc_init(void)
     // fixme defer initialization until an objc-using image is found?
     environ_init();
     tls_init();
-    static_init();
+    static_init();  // note: 初始化 libobjc 中的 C++ 全局变量，调用 constructor 函数
     lock_init();
     exception_init();
     // note: 处理链接库中的类

@@ -28,4 +28,46 @@
     NSLog(@"instanceMethod");
 }
 
+- (CGRect)structValue {
+    return CGRectMake(1, 1, 1, 1);
+}
+
+- (long double)longDoubleValue {
+    return 1.0001;
+}
+
+- (_Complex long double)complexLongDoubleValue {
+    return 1.0001;
+}
+
+- (void)overridedInstanceMethod {
+    
+}
+
+@end
+
+@interface SubClass : TestClass
+
+@end
+
+@implementation SubClass
+
+- (CGRect)structValue {
+    return [super structValue];
+}
+
+- (long double)longDoubleValue {
+    long double value = [super longDoubleValue];
+    return value;
+}
+
+- (_Complex long double)complexLongDoubleValue {
+    _Complex long double value = [super complexLongDoubleValue];
+    return value;
+}
+
+- (void)overridedInstanceMethod {
+    [super overridedInstanceMethod];
+}
+
 @end

@@ -14,4 +14,12 @@
     NSLog(@"TestClass category load");
 }
 
++ (void)nonLazyCategoryClassMethod {
+    NSLog(@"TestClass nonLazyCategoryClassMethod");
+}
+
+- (void)nonLazyCategoryInstanceMethod {
+    NSLog(@"TestClass nonLazyCategoryInstanceMethod");
+}
+
 @end

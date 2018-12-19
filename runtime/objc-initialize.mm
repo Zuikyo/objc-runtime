@@ -408,7 +408,7 @@ static void lockAndFinishInitializing(Class cls, Class supercls)
     if (!supercls  ||  supercls->isInitialized()) {
         _finishInitializing(cls, supercls);
     } else {
-        _finishInitializingAfter(cls, supercls);
+        _finishInitializingAfter(cls, supercls);    // note: 在父类的 initialize 调用结束后设置 initialized
     }
 }
 
@@ -497,7 +497,7 @@ void _class_initialize(Class cls)
     
     // Try to atomically set CLS_INITIALIZING.
     {
-        monitor_locker_t lock(classInitLock);
+        monitor_locker_t lock(classInitLock);   // note: 获取 类的 initialize 信息时使用全局互斥锁，保证多线程调用安全
         if (!cls->isInitialized() && !cls->isInitializing()) {
             cls->setInitializing();
             reallyInitialize = YES;
@@ -569,7 +569,7 @@ void _class_initialize(Class cls)
         if (_thisThreadIsInitializingClass(cls)) {
             return;
         } else if (!MultithreadedForkChild) {
-            waitForInitializeToComplete(cls);   // note: 等待其他线程的 initialize 结束
+            waitForInitializeToComplete(cls);   // note: 等待其他线程的对当前 classd 的 initialize 结束
             return;
         } else {
             // We're on the child side of fork(), facing a class that

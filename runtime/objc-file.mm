@@ -61,11 +61,11 @@ GETSECT(_getObjc2ClassRefs,           Class,           "__objc_classrefs"); // n
 GETSECT(_getObjc2SuperRefs,           Class,           "__objc_superrefs"); // note: 代码中用到的 superclass 引用
 GETSECT(_getObjc2ClassList,           classref_t,      "__objc_classlist"); // note: 当前 mach-o 中定义的所有类列表
 GETSECT(_getObjc2NonlazyClassList,    classref_t,      "__objc_nlclslist"); // note: 包含 +load 方法的类
-GETSECT(_getObjc2CategoryList,        category_t *,    "__objc_catlist");   // note: category 定义信息
-GETSECT(_getObjc2NonlazyCategoryList, category_t *,    "__objc_nlcatlist"); // note: 包含 +load 方法的 category
-GETSECT(_getObjc2ProtocolList,        protocol_t *,    "__objc_protolist"); // note: protocol 定义信息
+GETSECT(_getObjc2CategoryList,        category_t *,    "__objc_catlist");   // note: 当前 mach-o 中定义的所有 category 列表
+GETSECT(_getObjc2NonlazyCategoryList, category_t *,    "__objc_nlcatlist"); // note: 包含 +load 方法的 category 列表
+GETSECT(_getObjc2ProtocolList,        protocol_t *,    "__objc_protolist"); // note: 当前 mach-o 中定义的所有 protocol 列表
 GETSECT(_getObjc2ProtocolRefs,        protocol_t *,    "__objc_protorefs"); // note: 代码中用到的 protocol 引用
-GETSECT(getLibobjcInitializers,       Initializer,     "__objc_init_func"); // note: constructor 属性的函数
+GETSECT(getLibobjcInitializers,       Initializer,     "__objc_init_func"); // note: C++ 全局变量的初始化函数和 constructor 属性的函数；libobjc 中的 __objc_init_func 会在 static_init 中调用，其他的库会在 dyld 的 ImageLoaderMachO::doModInitFunctions 中调用
 
 
 objc_image_info *

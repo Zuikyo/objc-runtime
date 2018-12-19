@@ -9,7 +9,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-// 自定义类的 category
+// 自定义类的 category；如果没有 +load 方法，同一个 mach-o 中的 category 的方法可能会直接编译到类的 method list 中
 @interface TestClass (TestCategory)
 
 + (void)categoryClassMethod;

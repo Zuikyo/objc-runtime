@@ -800,7 +800,7 @@ class protocol_array_t :
 // note: 保存类的 method、property、protocol、category 数组。用 runtime 修改类信息时作用在 class_rw_t 上
 struct class_rw_t {
     // Be warned that Symbolication knows the layout of this structure.
-    uint32_t flags;
+    uint32_t flags; // note: 存储类的状态信息，见 RW_ 开头的位掩码宏
     uint32_t version;
 
     const class_ro_t *ro;

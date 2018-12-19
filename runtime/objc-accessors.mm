@@ -38,7 +38,7 @@
 @interface __NSMutableCopyable
 - (id)mutableCopyWithZone:(void *)zone;
 @end
-
+// note: 在 static_init 中调用 _GLOBAL__sub_I_objc_accessors.mm 进行初始化
 StripedMap<spinlock_t> PropertyLocks;
 StripedMap<spinlock_t> StructLocks;
 StripedMap<spinlock_t> CppObjectLocks;

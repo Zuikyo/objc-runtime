@@ -11,6 +11,21 @@
 
 #import "TestClass.h"
 
+// 常量编译在 __DATA,__data 节中
+static NSString *staticString = @"StaticString";
+
+__attribute__((constructor))
+void constructorFunction() {
+    NSLog(@"constructorFunction");
+}
+
+void testMsgSend() {
+    TestClass *obj = [TestClass new];
+    CGRect structValue = [obj structValue];
+    long double longDoubleValue = [obj longDoubleValue];
+    _Complex long double complexLongDoubleValue = [obj complexLongDoubleValue];
+}
+
 void testOverrideInCategory() {
     TestClass *object = [TestClass new];
     [object instanceMethod];
@@ -18,6 +33,9 @@ void testOverrideInCategory() {
 
 void testWeak() {
     @autoreleasepool {
+        id obj = [NSObject new];
+        __weak id weakObj = obj;
+        
         __weak TestClass *weakObject = [TestClass new];
     }
 }

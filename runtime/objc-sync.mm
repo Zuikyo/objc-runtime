@@ -66,7 +66,7 @@ struct SyncList {
 // Use multiple parallel lists to decrease contention among unrelated objects.
 #define LOCK_FOR_OBJ(obj) sDataLists[obj].lock
 #define LIST_FOR_OBJ(obj) sDataLists[obj].data
-static StripedMap<SyncList> sDataLists;
+static StripedMap<SyncList> sDataLists; // note: 在 static_init 中调用 _GLOBAL__sub_I_objc_sync.mm 进行初始化
 
 
 enum usage { ACQUIRE, RELEASE, CHECK };
