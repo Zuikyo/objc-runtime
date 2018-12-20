@@ -10,6 +10,7 @@
 // note: 有些文件没有被包含在工程内，因为导入后编译时会和系统头文件冲突，例如 oobjc-object.h
 
 #import "TestClass.h"
+#import "MRCTest.h"
 
 // 常量编译在 __DATA,__data 节中
 static NSString *staticString = @"StaticString";
@@ -65,7 +66,7 @@ int main(int argc, const char * argv[]) {
     @autoreleasepool {
         // insert code here...
         NSLog(@"Hello, World!");
-        
+        [MRCTest test];
         testRetainCount();
         testOverrideInCategory();
         testWeak();

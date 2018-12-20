@@ -1699,7 +1699,7 @@ static void reconcileInstanceVariables(Class cls, Class supercls, const class_ro
                          cls->nameForLogging(), ro->instanceStart, 
                          super_ro->instanceSize);
         }
-        class_ro_t *ro_w = make_ro_writeable(rw);
+        class_ro_t *ro_w = make_ro_writeable(rw);   // note: 修改 mach-o 中的 __DATA,__objc_ivar 中的 offset 数据
         ro = rw->ro;
         moveIvars(ro_w, super_ro->instanceSize);
         gdb_objc_class_changed(cls, OBJC_CLASS_IVARS_CHANGED, ro->name);

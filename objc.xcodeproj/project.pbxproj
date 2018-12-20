@@ -159,6 +159,7 @@
 		E8923DA4116AB2820071B552 /* a2a3-blocktramps-x86_64.s in Sources */ = {isa = PBXBuildFile; fileRef = E8923D9F116AB2820071B552 /* a2a3-blocktramps-x86_64.s */; };
 		E8923DA5116AB2820071B552 /* objc-block-trampolines.mm in Sources */ = {isa = PBXBuildFile; fileRef = E8923DA0116AB2820071B552 /* objc-block-trampolines.mm */; };
 		F8389AF621C9387100013789 /* TestCPP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8389AF421C9387100013789 /* TestCPP.cpp */; };
+		F8389AF921CB8F6100013789 /* MRCTest.m in Sources */ = {isa = PBXBuildFile; fileRef = F8389AF821CB8F6100013789 /* MRCTest.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		F867F6EB21C3B8B3001D6718 /* TestClass.m in Sources */ = {isa = PBXBuildFile; fileRef = F867F6EA21C3B8B3001D6718 /* TestClass.m */; };
 		F867F6EE21C3B8FA001D6718 /* TestClass+TestCategory.m in Sources */ = {isa = PBXBuildFile; fileRef = F867F6ED21C3B8FA001D6718 /* TestClass+TestCategory.m */; };
 		F867F6F121C3D6C0001D6718 /* NonLazyClass.m in Sources */ = {isa = PBXBuildFile; fileRef = F867F6F021C3D6C0001D6718 /* NonLazyClass.m */; };
@@ -332,6 +333,8 @@
 		E8923DA0116AB2820071B552 /* objc-block-trampolines.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = "objc-block-trampolines.mm"; path = "runtime/objc-block-trampolines.mm"; sourceTree = "<group>"; };
 		F8389AF421C9387100013789 /* TestCPP.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TestCPP.cpp; sourceTree = "<group>"; };
 		F8389AF521C9387100013789 /* TestCPP.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TestCPP.hpp; sourceTree = "<group>"; };
+		F8389AF721CB8F6100013789 /* MRCTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MRCTest.h; sourceTree = "<group>"; };
+		F8389AF821CB8F6100013789 /* MRCTest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MRCTest.m; sourceTree = "<group>"; };
 		F867F6E921C3B8B3001D6718 /* TestClass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TestClass.h; sourceTree = "<group>"; };
 		F867F6EA21C3B8B3001D6718 /* TestClass.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TestClass.m; sourceTree = "<group>"; };
 		F867F6EC21C3B8FA001D6718 /* TestClass+TestCategory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TestClass+TestCategory.h"; sourceTree = "<group>"; };
@@ -694,6 +697,8 @@
 				F867F6F621C3D7AB001D6718 /* NSObject+TestCategory.m */,
 				F8389AF521C9387100013789 /* TestCPP.hpp */,
 				F8389AF421C9387100013789 /* TestCPP.cpp */,
+				F8389AF721CB8F6100013789 /* MRCTest.h */,
+				F8389AF821CB8F6100013789 /* MRCTest.m */,
 			);
 			path = classes;
 			sourceTree = "<group>";
@@ -927,6 +932,7 @@
 				F867F6F121C3D6C0001D6718 /* NonLazyClass.m in Sources */,
 				F867F6F421C3D6FC001D6718 /* TestClass+NonLazyCategory.m in Sources */,
 				305B27561C7D9E96005AC125 /* main.m in Sources */,
+				F8389AF921CB8F6100013789 /* MRCTest.m in Sources */,
 				F867F6F721C3D7AB001D6718 /* NSObject+TestCategory.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
